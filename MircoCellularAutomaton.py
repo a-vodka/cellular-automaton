@@ -1,4 +1,5 @@
 import numpy as np
+import multiprocessing
 
 
 class MircoCellularAutomaton:
@@ -58,17 +59,45 @@ class MircoCellularAutomaton:
             if not self.data[i - 1, j - 1] and rnds() < prob[0, 0]: self.newdata[i - 1, j - 1] = self.data[i, j]
         pass
 
-    def next_iteration(self):
-        self.newdata = np.copy(self.data)
+    def next_iteration(self, bw, ew):
 
         if self.periodic:
             offset = -2
         else:
             offset = 1
+        if bw == 0:
+            bww = offset
+        else:
+            bww = bw
 
-        for i in range(offset, self.w - 1):
+        if ew == self.w:
+            eww = ew - 1
+        else:
+            eww = ew + 1
+
+        for i in range(bww, eww):
             for j in range(offset, self.h - 1):
                 self.neighbour_method(i, j)
+
+
+        pass
+
+    def f(self, x):
+        print x
+
+    def next_iteration_parallel_runner(self):
+        self.newdata = np.copy(self.data)
+
+        pool = multiprocessing.Pool(processes=4)
+        pool.apply(self.f, (10,))
+        print multiprocessing.current_process()
+
+        # t1 = multiprocessing.Process(target=self.next_iteration, args=[0, self.w / 2])
+        # t2 = multiprocessing.Process(target=self.next_iteration, args=[self.w / 2 + 1, self.w])
+        # t1.start()
+        # t2.start()
+        # t1.join()
+        # t2.join()
         self.data = self.newdata
         pass
 
@@ -121,7 +150,8 @@ class MircoCellularAutomaton:
         i = 0
         saved_zero_cell = -1
         while i < max_iter:
-            self.next_iteration()
+            # self.next_iteration()
+            self.next_iteration_parallel_runner()
             zero_cell = self.w * self.h - np.count_nonzero(self.data)
 
             if verbose:
@@ -129,7 +159,6 @@ class MircoCellularAutomaton:
 
             # self.add_new_centers(1)
             # self.add_new_centers_exponentially(10., 0.1, i)
-
 
             if i % 10:
                 if saved_zero_cell == zero_cell:

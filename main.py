@@ -108,29 +108,33 @@ def main():
     np.random.seed()
 
     fig, ax = plt.subplots(3, 2, figsize=(5.8, 8.3), dpi=300)
-
+    plt.close()
     if True:
         # prob_matrix = get_pobability_matrix(2.0, 2.0, angle=0, verbose=False)
 
         prob_matrix = np.array([[1, 1, 0], [1, 1, 1], [0, 1, 1]], dtype=float)
 
-        ca = MircoCellularAutomaton(513, 565, neighbour='custom', neighbour_matrix=prob_matrix, periodic=False)
-        ca.initial_cells(513)
-        # ca.initial_cell_mesh()
+        #ca = MircoCellularAutomaton(513, 565, neighbour='custom', neighbour_matrix=prob_matrix, periodic=False)
 
-        ca.calculate(verbose=True)
+        ca = MircoCellularAutomaton(100, 100, neighbour='moore', periodic=False)
 
-        while False:
-            is_converged = ca.calculate(verbose=True, max_iter=5)
-            if is_converged:
-                break
+        #ca.initial_cells(10)
+        ca.initial_cell_mesh()
+
+#        ca.calculate(verbose=True)
+
+        while True:
+            is_converged = ca.calculate(verbose=True, max_iter=1)
             plt.imshow(ca.data, interpolation='none')
             plt.tight_layout()
             plt.show()
+            if is_converged:
+                break
 
-        data = ca.data
+        exit()
         bwimage = ca.to_black_and_white()
         ax[0, 0].imshow(data, interpolation='none')
+
     else:
 
         image = imread('fig-2.gif', as_grey=True)
@@ -251,4 +255,5 @@ def main():
     #    print norm_area[i], t, Cs[i], t, orient[i], t, scale_factor[i]
 
 
-main()
+if __name__ == '__main__':
+    main()
