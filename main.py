@@ -8,6 +8,7 @@ from MircoCellularAutomaton import *
 from scipy.integrate import cumtrapz
 from skimage.filters import threshold_otsu, threshold_isodata
 import skimage.morphology
+from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 
 
 # prob_matrix = np.array([[0.1, 0.1, 0.1], [0.1, 1, 0.1], [0.1, 0.1, 0.1]], dtype=float)
@@ -30,7 +31,7 @@ def get_pobability_matrix(rx, ry, angle=0, w=999, h=999, verbose=False):
 
     image[rr, cc] = 1
 
-    image = skimage.transform.rotate(image, angle=angle, order=1)
+    image = skimage.transform.rotate(image, angle=angle - 90, order=1)
 
     prob_matrix = np.zeros((3, 3), dtype=float)
 
@@ -44,24 +45,42 @@ def get_pobability_matrix(rx, ry, angle=0, w=999, h=999, verbose=False):
             prob_matrix[i, j] = np.count_nonzero(image[w_low:w_high, h_low:h_high]) / (ws * hs)
 
     if verbose:
-        print prob_matrix
-        plt.imshow(image)
+        print(prob_matrix)
+
+        colors = [(1, 1, 1), (0.7, 0.7, 0.7)]
+        cm = LinearSegmentedColormap.from_list(
+            'my_list', colors, N=2)
+
+        fig = plt.figure(figsize=(3, 3))
+        ax = fig.add_subplot(1, 1, 1)
+        ax.imshow(image, cmap=cm)
 
         bx = (0, w, w, 0, w)
         by = (hs, hs, 2 * hs, 2 * hs, 2 * hs)
-        plt.plot(bx, by, '-b', linewidth=2.0)
+        ax.plot(bx, by, '-k', linewidth=1.0)
 
         bx = (ws, ws, 2 * ws, 2 * ws, 2 * ws)
         by = (0, h, h, 0, h)
-        plt.plot(bx, by, '-b', linewidth=2.0)
-        plt.axis((0, w, h, 0))
-        plt.show()
+        ax.plot(bx, by, '-k', linewidth=1.0)
+        ax.axis((0, w, h, 0))
+        ax.set_yticklabels([])
+        ax.set_xticklabels([])
+        # prob_matrix = np.array([[0, 1, 1], [1, 1, 1], [1, 1, 0]], dtype=float)
+        for i in range(3):
+            for j in range(3):
+                ax.text((1. + 2 * i) / 6., (1. + 2 * j) / 6., "{0:.3f}".format(prob_matrix[2 - j, i]),
+                        horizontalalignment='center', verticalalignment='center', fontsize='xx-large',
+                        transform=ax.transAxes)
+
+        fig.tight_layout()
+        fig.savefig("prob_matirx5.png")
+        fig.show()
 
     return prob_matrix
 
 
 def plot_hist(data, ax):
-    #na_geparam = scipy.stats.genextreme.fit(data)
+    # na_geparam = scipy.stats.genextreme.fit(data)
     na_lognparam = scipy.stats.lognorm.fit(data)
     data_mean, data_std = np.mean(data), np.std(data)
 
@@ -108,34 +127,70 @@ def main():
     np.random.seed()
 
     fig, ax = plt.subplots(3, 2, figsize=(5.8, 8.3), dpi=300)
-
+    cm = []
     if True:
-        # prob_matrix = get_pobability_matrix(2.0, 2.0, angle=0, verbose=False)
+        prob_matrix = get_pobability_matrix(2.0, 2.0 * 2.0 / 3.0, angle=45, verbose=False)
+        #prob_matrix = get_pobability_matrix(2.0, 2.0, angle=0, verbose=True)
 
-        prob_matrix = np.array([[1, 1, 0], [1, 1, 1], [0, 1, 1]], dtype=float)
+        left_prob_matrix = np.array([[1, 1, 0], [1, 1, 1], [0, 1, 1]], dtype=float)
+        right_prob_matrix = np.array([[0, 1, 1], [1, 1, 1], [1, 1, 0]], dtype=float)
 
-        ca = MircoCellularAutomaton(513, 565, neighbour='custom', neighbour_matrix=prob_matrix, periodic=False)
-        ca.initial_cells(513)
-        # ca.initial_cell_mesh()
+        ca = MircoCellularAutomaton(100, 100, neighbour='custom', neighbour_matrix=prob_matrix, periodic=False, animation=True)
+        #ca = MircoCellularAutomaton(513, 565, neighbour='moore', periodic=False, animation=True)
+        #ca = MircoCellularAutomaton(513, 565, neighbour='von_neumann', periodic=False, animation=True)
 
-        ca.calculate(verbose=True)
+        #ca = MircoCellularAutomaton(513, 565, neighbour='custom', neighbour_matrix=left_prob_matrix, periodic=False, animation=True)
+        #ca = MircoCellularAutomaton(513, 565, neighbour='custom', neighbour_matrix=right_prob_matrix, periodic=False, animation=True)
 
+
+        Num_grains = 714
+        #ca.initial_cells(Num_grains)
+        ca.initial_cell_mesh()
+
+        colors = np.empty((Num_grains, 4))
+        colors[0] = [1., 1., 1., 1.]  # white background
+        for i in range(1, Num_grains):
+            colors[i] = [np.random.random_sample(), np.random.random_sample(), np.random.random_sample(), 1]
+
+        cm = ListedColormap(colors, name='my_list')
+
+        #
         while False:
             is_converged = ca.calculate(verbose=True, max_iter=5)
             if is_converged:
                 break
-            plt.imshow(ca.data, interpolation='none')
-            plt.tight_layout()
-            plt.show()
-
+            fig1 = plt.figure(figsize=(3, 3))
+            ax1 = fig1.add_subplot(111)
+            ax1.imshow(ca.data, interpolation='none', cmap=cm)
+            fig1.tight_layout()
+            fig1.show()
+        else:
+            ca.calculate(verbose=True)
         data = ca.data
+
+        #ca.save_animation_mpeg('elipse_prob.avi')
+        #ca.save_animation_gif('elipse_prob.gif')
+
         bwimage = ca.to_black_and_white()
-        ax[0, 0].imshow(data, interpolation='none')
+        ax[0, 0].imshow(data, interpolation='none', cmap=cm)
+
+        fig_m = plt.figure(figsize=(5.65, 5.13), dpi=300)
+        ax_m = fig_m.add_subplot(1, 1, 1)
+
+        ax_m.imshow(ca.data, interpolation='none', cmap=cm)
+        ax_m.set_yticklabels([])
+        ax_m.set_xticklabels([])
+        fig_m.tight_layout()
+        fig_m.savefig('ellipse_micro.png', dpi=300)
+        fig_m.show()
+
+        np.save("./models/test", ca.data)
+
     else:
 
         image = imread('fig-2.gif', as_grey=True)
         from skimage import filters
-        print threshold_isodata(image)
+        print(threshold_isodata(image))
         face = image
         #        plt.imshow(face)
         #        plt.show()
@@ -150,7 +205,7 @@ def main():
         fval = (lc + rc) / 2.0
 
         thresh = threshold_otsu(image)
-        print fval, thresh
+        print(fval, thresh)
         bw = np.zeros_like(image)
         bw[image > 0.781] = 1.
         data = bw
@@ -162,13 +217,22 @@ def main():
         # plt.show()
         ax[0, 0].imshow(data, interpolation='none', cmap='gray')
 
+        fig_m = plt.figure(figsize=(5.65, 5.13), dpi=300)
+        ax_m = fig_m.add_subplot(1, 1, 1)
+
+        ax_m.imshow(image, interpolation='none', cmap='gray')
+        ax_m.set_yticklabels([])
+        ax_m.set_xticklabels([])
+        fig_m.tight_layout()
+        fig_m.savefig('micro.png', dpi=300)
+        fig_m.show()
+
+        np.save("./models/pure-micro", data)
+
     (w, h) = data.shape
     ax[0, 0].axis((0, h, w, 0))
 
-    #    plt.imshow(data, interpolation='none')
-    #    plt.tight_layout()
-    #    plt.show()
-
+    exit()
     label_img = skimage.measure.label(data, neighbors=4, background=0)
     regions = skimage.measure.regionprops(label_img, coordinates='xy')
 
@@ -202,18 +266,18 @@ def main():
         ax[0, 1].plot(x0, y0, '.r', markersize=1)
 
         cs_i = 4. * np.pi * area[i] / (perimeter[i] ** 2)
-        print i
+        print(i)
         if cs_i > 1:
             plt.close()
-            print i, cs_i, props._slice, area[i], perimeter[i], vdk_perimeter(props.convex_image)
+            print(i, cs_i, props._slice, area[i], perimeter[i], vdk_perimeter(props.convex_image))
             plt.imshow(props.convex_image)
             plt.show()
 
         i += 1
 
-    print 'Image size =', data.shape
-    print 'Num of detected grains = ', i
-    print 'Grains per square pixel =', float(i) / w / h
+    print('Image size =', data.shape)
+    print('Num of detected grains = ', i)
+    print('Grains per square pixel =', float(i) / w / h)
 
     ax[0, 1].axis((0, h, w, 0))
     # ax[0, 1].plot(ca.centers[1, :], ca.centers[0, :], '.g', markersize=1)

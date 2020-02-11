@@ -1,9 +1,12 @@
 import numpy as np
 
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+
 
 class MircoCellularAutomaton:
 
-    def __init__(self, width, height, neighbour='moore', neighbour_matrix=None, periodic=False):
+    def __init__(self, width, height, neighbour='moore', neighbour_matrix=None, periodic=False, animation=False):
         self.newdata = None
         self.data = np.zeros((width, height), dtype=int)
         self.w = width
@@ -12,6 +15,7 @@ class MircoCellularAutomaton:
         self.num_of_cells = 0
         self.periodic = periodic
         self.centers = None
+        self.it_number = 0
         np.random.RandomState()
         if neighbour == 'moore':
             self.neighbour_method = self.moore
@@ -20,6 +24,9 @@ class MircoCellularAutomaton:
         if neighbour == 'custom' and neighbour_matrix is not None:
             self.neighbour_method = self.custom_prob
             self.prob_matrix = neighbour_matrix
+        self.is_animated = animation
+        self.animation_set = []
+        self.animation_fig = plt.figure(dpi=150)
 
     def von_neumann(self, i, j):
         if self.data[i, j]:
@@ -84,8 +91,8 @@ class MircoCellularAutomaton:
 
     def initial_cell_mesh(self, rows=5, cols=5):
         self.num_of_cells = rows * cols
-        col_step = self.w / cols
-        row_step = self.h / rows
+        col_step = self.h / cols
+        row_step = self.w / rows
         k = 1
         self.centers = np.empty((2, self.num_of_cells), dtype=int)
         for i in range(rows):
@@ -114,29 +121,58 @@ class MircoCellularAutomaton:
 
     def add_new_centers_exponentially(self, number, param, iter_number):
         num = int(number * np.exp(-param * iter_number))
-        print "num = ", num
+        print("num = ", num)
         self.add_new_centers(num)
 
+    def add_new_centers_normally(self, number, param, iter_number):
+        from scipy.stats import norm
+
+        num = int(number * (norm.cdf(iter_number, param, 15) - norm.cdf(iter_number - 1., param, 15)))
+        print("num = ", num)
+        self.add_new_centers(num)
+
+    def do_animation(self):
+        im = plt.imshow(self.data, interpolation=None, animated=True, aspect='equal')
+        self.animation_set.append([im])
+
+    def save_animation(self, filename, writer):
+        if self.is_animated:
+            self.animation_fig.tight_layout()
+            ani = animation.ArtistAnimation(self.animation_fig, self.animation_set, blit=True)
+            self.animation_fig.show()
+            ani.save(filename=filename, writer=writer)
+            self.animation_fig.show()
+
+    def save_animation_mpeg(self, filename):
+        self.save_animation(filename=filename, writer=animation.FFMpegWriter(fps=24))
+
+    def save_animation_gif(self, filname):
+        self.save_animation(filename=filname, writer=animation.PillowWriter(fps=24))
+
     def calculate(self, verbose=False, max_iter=np.inf):
-        i = 0
         saved_zero_cell = -1
-        while i < max_iter:
+        max_iter += self.it_number
+
+        while self.it_number < max_iter:
             self.next_iteration()
             zero_cell = self.w * self.h - np.count_nonzero(self.data)
 
             if verbose:
-                print i, zero_cell, "{0}%".format(zero_cell * 100.0 / self.w / self.h)
+                print(self.it_number, zero_cell, "{0}%".format(zero_cell * 100.0 / self.w / self.h))
+
+            if self.is_animated:
+                self.do_animation()
 
             # self.add_new_centers(1)
             # self.add_new_centers_exponentially(10., 0.1, i)
+            # self.add_new_centers_normally(100., 30., self.it_number)
 
-
-            if i % 10:
+            if self.it_number % 10:
                 if saved_zero_cell == zero_cell:
                     return True
                 saved_zero_cell = zero_cell
 
-            i += 1
+            self.it_number += 1
 
             if zero_cell == 0:
                 return True
@@ -155,4 +191,4 @@ class MircoCellularAutomaton:
         return bw_image
 
     def print_data(self):
-        print self.data
+        print(self.data)

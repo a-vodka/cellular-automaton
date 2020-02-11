@@ -1,0 +1,7 @@
+
+[Aluminum_phenopowerlaw]
+
+(plasticity)	phenopowerlaw
+resistance_slip	  12
+shearrate_slip	  12
+resolvedstress_slip	  12
