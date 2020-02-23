@@ -11,7 +11,74 @@ class DamaskExporter:
             os.makedirs(self.abs_path)
         self.data = data
         self.project_name = project_name
+
+        self.avg_data = None
+        self.ls_data = None
+        self.ls_nodal_data = None
+        self.ls_data_file = ""
+        self.n_ls = 0
         pass
+
+    def tension_none(self):
+        strain = np.full((3, 3), None)
+        stress = np.full((3, 3), None)
+        self.add_loadstep(strain=strain, stress=stress)
+        return strain, stress
+
+    def tension_x(self, val=1e-3):
+        strain = np.zeros((3, 3))
+        stress = np.full((3, 3), None)
+        strain[0, 0] = val
+        self.add_loadstep(strain=strain, stress=stress)
+        strain[0, 0] = -val
+        self.add_loadstep(strain=strain, stress=stress)
+        return strain, stress
+
+    def tension_y(self, val=1e-3):
+        strain = np.zeros((3, 3))
+        stress = np.full((3, 3), None)
+        strain[1, 1] = val
+        self.add_loadstep(strain=strain, stress=stress)
+        strain[1, 1] = -val
+        self.add_loadstep(strain=strain, stress=stress)
+        return strain, stress
+
+    def tension_x_and_y(self, xval=1e-4, yval=1e-4, restore=True):
+        strain = np.zeros((3, 3))
+        stress = np.full((3, 3), None)
+        strain[0, 0] = xval
+        strain[1, 1] = yval
+        strain[2, 2] = None
+        stress[2, 2] = 0
+        self.add_loadstep(strain=strain, stress=stress)
+        if restore:
+            strain[0, 0] = -xval
+            strain[1, 1] = -yval
+            self.add_loadstep(strain=strain, stress=stress)
+        return strain, stress
+
+    def shear_xy(self, val=1e-3):
+        strain = np.zeros((3, 3))
+        stress = np.full((3, 3), np.nan)
+        strain[1, 0] = val
+        self.add_loadstep(strain=strain, stress=stress)
+        strain[1, 0] = -val
+        self.add_loadstep(strain=strain, stress=stress)
+        return strain, stress
+
+    def tension_y_and_shear_xy(self, val=1e-3):
+        strain = np.zeros((3, 3))
+        stress = np.full((3, 3), np.nan)
+        strain[0, 0] = None
+        strain[2, 2] = None
+        strain[1, 1] = val
+        stress[0, 0] = 0
+        stress[2, 2] = 0
+        self.add_loadstep(strain=strain, stress=stress)
+        strain[1, 0] = -val
+        strain[1, 1] = -val
+        # self.add_loadstep(strain=strain, stress=stress)
+        return strain, stress
 
     def create_geom_file(self):
         w, h = self.data.shape
@@ -19,11 +86,13 @@ class DamaskExporter:
         geom_file += "5	header\n"
         geom_file += "grid	a {0}	b {1}	c 1\n".format(h, w)
         geom_file += "size	x 1.000000	y 1.000000	z 1.000000\n"
-        geom_file += "origin	x 0.000000	y 0.000000	z 0.000000\n"
+        geom_file += "origin	x 0.000000	y 0.0000000	z 0.000000\n"
         geom_file += "microstructures   1\n"
         geom_file += "homogenization    1\n"
 
-        arr_str = np.array2string(self.data, max_line_width=9999999, threshold=9999999).replace('[', '').replace(']', '').replace('\n ', '\n')
+        arr_str = np.array2string(self.data, max_line_width=9999999, threshold=9999999).replace('[', '').replace(']',
+                                                                                                                 '').replace(
+            '\n ', '\n')
         geom_file += arr_str
 
         text_file = open(self.abs_path + os.sep + self.project_name + ".geom", "w")
@@ -32,7 +101,7 @@ class DamaskExporter:
 
         pass
 
-    def create_material_config(self):
+    def create_material_config(self, rand_orient=True):
 
         material_file = self.load_template
 
@@ -49,17 +118,129 @@ class DamaskExporter:
         material_file += "<texture>\n"
         for i in range(min_num, max_num, 1):
             material_file += "[Grain{0}]\n".format(i)
-            material_file += "(gauss) phi1 {0} Phi {1} phi2 {2} scatter 0.0  fraction 1.0\n".format(
-                np.random.random_sample() * 360, np.random.random_sample() * 360, np.random.random_sample() * 360)
+            orient = np.random.rand((3)) * 360.0
+            if not rand_orient:
+                orient = 0.0 * orient
+            material_file += "(gauss) phi1 {0} Phi {1} phi2 {2} scatter 0.0  fraction 1.0\n".format(*orient)
 
         text_file = open(self.abs_path + os.sep + "material.config", "w")
         text_file.write(material_file)
         text_file.close()
 
     def run_damask(self):
+        self.write_loading()
         run_str = "DAMASK_spectral --geom {0}.geom --load {1}.load".format(self.project_name, self.project_name)
         os.chdir(self.abs_path)
+        ret = os.system("bash -c 'source ~/damask-2.0.3/env/DAMASK.sh;{0}'".format(run_str))
+        print('ret code == ', ret)
+        if ret:
+            exit(ret)
+        pass
+
+    def post_proc(self, avg_only=True):
+
+        s = self.post_proc_script
+        if avg_only:
+            s = self.post_proc_script_short
+
+        run_str = s.format(self.project_name)
+        os.chdir(self.abs_path)
+        print(run_str)
         os.system("bash -c 'source ~/damask-2.0.3/env/DAMASK.sh;{0}'".format(run_str))
+
+        self.avg_data = self.post_txt("ttl" + self.project_name + "_" + self.project_name + ".txt")
+
+        pass
+
+    def load_by_ls_num(self, n):
+        frmt = ":0{0}d".format(int(np.log(self.n_ls))-1)
+        frmt = "{"+frmt+"}"
+        self.ls_data = self.post_txt(self.project_name + "_" + self.project_name + "_inc{}.txt".format(frmt).format(n))
+        self.ls_nodal_data = self.post_txt(self.project_name + "_" + self.project_name + "_inc{}_nodal.txt".format(frmt).format(n))
+        pass
+
+    def post_txt(self, filename):
+        text_file = open(self.abs_path + os.sep + "postProc" + os.sep + filename, "r")
+        val = text_file.readline().split('\t')
+
+        n_head = int(val[0]) + 1
+        text_file.close()
+        full_name = self.abs_path + os.sep + "postProc" + os.sep + filename
+
+        data = np.loadtxt(full_name, skiprows=n_head, dtype=np.float64)
+
+        return data
+
+        pass
+
+    def add_loadstep(self, strain, stress, time=1, nsubst=1, write_n_subs=1):
+
+        dropguessing = ""
+        if self.ls_data_file:
+            dropguessing = "dropguessing"
+
+        strain_str = "fdot {0} {1} {2}  {3} {4} {5}   {6} {7} {8} ".format(*strain.reshape((9)))
+        stress_str = "stress  {0} {1} {2}  {3} {4} {5}   {6} {7} {8} ".format(*stress.reshape((9)))
+        ls_str = "time {0}  incs {1} freq {2} {3}\n".format(time, nsubst, write_n_subs, dropguessing)
+
+        strain_str = strain_str.replace('None', '*')
+        stress_str = stress_str.replace('None', '*')
+
+        strain_str = strain_str.replace('nan', '*')
+        stress_str = stress_str.replace('nan', '*')
+
+        self.ls_data_file += strain_str + stress_str + ls_str
+        self.n_ls += 1
+        print(self.ls_data_file)
+        pass
+
+    def write_loading(self):
+        text_file = open(self.abs_path + os.sep + self.project_name + ".load", "w")
+        text_file.write(self.ls_data_file)
+        text_file.close()
+        pass
+
+    def get_avg_strain_tensor(self, n=-1):
+        return self.avg_data[n, 36:36 + 9].reshape((3, 3))
+
+    def get_avg_strain_vonMizes(self, n=-1):
+        return self.avg_data[n, 45]
+
+    def get_avg_stress_tensor(self, n=-1):
+        return self.avg_data[n, 26:26 + 9].reshape((3, 3))
+
+    def get_avg_stress_vonMizes(self, n=-1):
+        return self.avg_data[n, 35]
+
+    def get_strain_tensor(self):
+        w, _ = self.ls_data.shape
+        return self.ls_data[:, 36:36 + 9].reshape((w, 3, 3))
+
+    def get_stress_tensor(self):
+        w, _ = self.ls_data.shape
+        return self.ls_data[:, 26:26 + 9].reshape((w, 3, 3))
+
+    def get_stress_vonMizes(self):
+        w, _ = self.ls_data.shape
+        return self.ls_data[:, 35].reshape((w))
+
+    def get_node_coord(self):
+        w, _ = self.ls_data.shape
+        return self.ls_data[:, 5:5 + 3].reshape((w, 3))
+
+    def get_displ(self):
+        w, _ = self.ls_nodal_data.shape
+        return self.ls_nodal_data[:, 3:3 + 3].reshape((w, 3))
+        pass
+
+    def get_displ_sum(self):
+        d = self.get_displ()
+        return np.sqrt(d[:, 0] ** 2 + d[:, 1] ** 2 + d[:, 2] ** 2)
+        pass
+
+    def get_displ_nodal_coord(self):
+        w, _ = self.ls_nodal_data.shape
+        return self.ls_nodal_data[:, 0:0 + 3].reshape((w, 3))
         pass
 
     load_template = """
@@ -119,3 +300,59 @@ interaction_slipslip    1 1 1.4 1.4 1.4 1.4
 atol_resistance         1
 
 """
+
+    post_proc_script = """
+rm -r ./postProc
+
+filename="{0}_{0}"
+
+echo "$filename.spectralOut"
+
+postResults --nodal --cr f,p --split --separation x,y,z "$filename.spectralOut"
+
+
+cd ./postProc
+
+addCauchy $filename_inc*.txt
+addMises -s Cauchy $filename_inc*.txt
+
+addStrainTensors --left --logarithmic $filename_inc*.txt
+addMises -e "ln(V)" $filename_inc*.txt
+
+addDisplacement --nodal $filename_inc*.txt     
+
+cd ..
+
+postResults --cr f,p "$filename.spectralOut" --prefix="ttl"
+
+cd ./postProc
+
+addCauchy ttl$filename_inc*.txt
+addMises -s Cauchy ttl$filename_inc*.txt
+
+addStrainTensors --left --logarithmic ttl$filename_inc*.txt
+addMises -e "ln(V)" ttl$filename_inc*.txt
+
+     
+
+
+
+"""
+
+    post_proc_script_short = """
+    rm -r ./postProc
+
+    filename="{0}_{0}"
+
+    echo "$filename.spectralOut"
+
+    postResults --cr f,p "$filename.spectralOut" --prefix="ttl"
+
+    cd ./postProc
+
+    addCauchy $filename_inc*.txt
+    addMises -s Cauchy $filename_inc*.txt
+
+    addStrainTensors --left --logarithmic $filename_inc*.txt
+    addMises -e "ln(V)" $filename_inc*.txt
+    """
