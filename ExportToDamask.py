@@ -29,6 +29,8 @@ class DamaskExporter:
         strain = np.zeros((3, 3))
         stress = np.full((3, 3), None)
         strain[0, 0] = val
+        strain[2, 2] = None
+        stress[2, 2] = 0
         self.add_loadstep(strain=strain, stress=stress)
         strain[0, 0] = -val
         self.add_loadstep(strain=strain, stress=stress)
@@ -38,6 +40,8 @@ class DamaskExporter:
         strain = np.zeros((3, 3))
         stress = np.full((3, 3), None)
         strain[1, 1] = val
+        strain[2, 2] = None
+        stress[2, 2] = 0
         self.add_loadstep(strain=strain, stress=stress)
         strain[1, 1] = -val
         self.add_loadstep(strain=strain, stress=stress)
@@ -61,23 +65,11 @@ class DamaskExporter:
         strain = np.zeros((3, 3))
         stress = np.full((3, 3), np.nan)
         strain[1, 0] = val
-        self.add_loadstep(strain=strain, stress=stress)
-        strain[1, 0] = -val
-        self.add_loadstep(strain=strain, stress=stress)
-        return strain, stress
-
-    def tension_y_and_shear_xy(self, val=1e-3):
-        strain = np.zeros((3, 3))
-        stress = np.full((3, 3), np.nan)
-        strain[0, 0] = None
         strain[2, 2] = None
-        strain[1, 1] = val
-        stress[0, 0] = 0
         stress[2, 2] = 0
         self.add_loadstep(strain=strain, stress=stress)
         strain[1, 0] = -val
-        strain[1, 1] = -val
-        # self.add_loadstep(strain=strain, stress=stress)
+        self.add_loadstep(strain=strain, stress=stress)
         return strain, stress
 
     def create_geom_file(self):
@@ -113,7 +105,8 @@ class DamaskExporter:
         for i in range(min_num, max_num, 1):
             material_file += "[Grain{0}]\n".format(i)
             material_file += "crystallite 1\n"
-            material_file += "(constituent) phase 1 texture {0} fraction 1.0\n".format(i)
+            material_file += "(constituent) phase 1 texture {0} fraction 0.82\n".format(i)
+            material_file += "(constituent) phase 2 texture {0} fraction 0.18\n".format(i)
 
         material_file += "<texture>\n"
         for i in range(min_num, max_num, 1):
@@ -266,38 +259,54 @@ mech	none
 (output) p              # first Piola-Kichhoff stress tensor; synonyms: "firstpiola", "1stpiola"
 (output) lp             # plastic velocity gradient tensor
 
-#-------------------#
+
+
 <phase>
-#-------------------#
-[Aluminum_phenopowerlaw]
+
+# Tasan et.al. 2015 Acta Materalia
+# Tasan et.al. 2015 International Journal of Plasticity
+# Diehl et.al. 2015 Meccanica
+[BCC-Ferrite]
+
 elasticity              hooke
 plasticity              phenopowerlaw
 
-(output)                resistance_slip
-(output)                shearrate_slip
-(output)                resolvedstress_slip
-(output)                totalshear
-(output)                resistance_twin
-(output)                shearrate_twin
-(output)                resolvedstress_twin
-(output)                totalvolfrac
-
-lattice_structure       fcc
-Nslip                   12   # per family
-Ntwin                    0   # per family
-
-c11                     106.75e9
-c12                     60.41e9
-c44                     28.34e9
-
+lattice_structure       bcc
+Nslip                   12  12                  # per family
+Ntwin                    0                      # per family
+c11                     233.3e9
+c12                     135.5e9
+c44                     118.0e9
 gdot0_slip              0.001
 n_slip                  20
-tau0_slip                 31e6 # per family
-tausat_slip               63e6 # per family
-a_slip                  2.25
-h0_slipslip             75e6
+tau0_slip                95.e6  97.e6           # per family, optimization long simplex 109
+tausat_slip             222.e6 412.7e6          # per family, optimization long simplex 109
+h0_slipslip             1000.0e6
 interaction_slipslip    1 1 1.4 1.4 1.4 1.4
-atol_resistance         1
+w0_slip                 2.0
+a_slip                  2.0
+
+# Tasan et.al. 2015 Acta Materalia
+# Tasan et.al. 2015 International Journal of Plasticity
+# Diehl et.al. 2015 Meccanica
+[BCC-Martensite]
+
+elasticity              hooke
+plasticity              phenopowerlaw
+
+lattice_structure       bcc
+Nslip                   12  12                  # per family
+Ntwin                    0                      # per family
+c11                     417.4e9
+c12                     242.4e9
+c44                     211.1e9
+gdot0_slip              0.001
+n_slip                  20
+tau0_slip               405.8e6  456.7e6        # per family
+tausat_slip             872.9e6  971.2e6        # per family
+h0_slipslip             563.0e9
+interaction_slipslip    1 1 1.4 1.4 1.4 1.4
+a_slip                 2.0
 
 """
 

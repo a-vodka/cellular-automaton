@@ -64,7 +64,7 @@ def plot_hist(data, ax, ax1, i, yticks):
     w = bin_edges[1] - bin_edges[0]
     # print hist, edg, bin_edges, w, yticks
 
-    ax.bar(edg, hist, zs=i, zdir='y', alpha=0.8, width=w)
+    #ax.bar(edg, hist, zs=i, zdir='y', alpha=0.8, width=w)
     kde = gaussian_kde(data)
 
     xdata = np.linspace(data.min(), data.max(), 300)
@@ -77,7 +77,7 @@ def plot_hist(data, ax, ax1, i, yticks):
 
 
 def main():
-    path = './models/'
+    path = './models2/'
 
     files = os.listdir(path)
     numfiles = len(files)
@@ -88,25 +88,26 @@ def main():
     yticks = np.empty(numfiles, dtype='U25')
     i = 0
 
-    fig_na = plt.figure(dpi=300)
-    fig_cs = plt.figure(dpi=300)
-    fig_scf = plt.figure(dpi=300)
-    fig_ori = plt.figure(dpi=300)
+    #fig_na = plt.figure(dpi=300)
+    #fig_cs = plt.figure(dpi=300)
+    #fig_scf = plt.figure(dpi=300)
+    #fig_ori = plt.figure(dpi=300)
 
-    ax_na = fig_na.add_subplot(111, projection='3d')
-    ax_cs = fig_cs.add_subplot(111, projection='3d')
-    ax_scf = fig_scf.add_subplot(111, projection='3d')
-    ax_ori = fig_ori.add_subplot(111, projection='3d')
+    #ax_na = fig_na.add_subplot(111, projection='3d')
+    #ax_cs = fig_cs.add_subplot(111, projection='3d')
+    #ax_scf = fig_scf.add_subplot(111, projection='3d')
+    #ax_ori = fig_ori.add_subplot(111, projection='3d')
 
     fig1_na = plt.figure(dpi=300)
     fig1_cs = plt.figure(dpi=300)
     fig1_scf = plt.figure(dpi=300)
     fig1_ori = plt.figure(dpi=300)
 
-    ax1_na = fig1_na.add_subplot(111)
-    ax1_cs = fig1_cs.add_subplot(111)
-    ax1_scf = fig1_scf.add_subplot(111)
-    ax1_ori = fig1_ori.add_subplot(111)
+    ax1_na = fig1_na.add_subplot(111, title="Na")
+    ax1_cs = fig1_cs.add_subplot(111, title="Cs")
+    ax1_scf = fig1_scf.add_subplot(111, title="Scf")
+    ax1_ori = fig1_ori.add_subplot(111, title="Orient")
+
 
     for name in files:
 
@@ -122,10 +123,10 @@ def main():
             # scale_factor[i, :_scf.size] = _scf
             # orient[i, :_ori.size] = _ori
 
-            plot_hist(_na, ax_na, ax1_na, i, yticks)
-            plot_hist(_cs, ax_cs, ax1_cs, i, yticks)
-            plot_hist(_scf, ax_scf, ax1_scf, i, yticks)
-            plot_hist(_ori, ax_ori, ax1_ori, i, yticks)
+            plot_hist(_na, None, ax1_na, i, yticks)
+            plot_hist(_cs, None, ax1_cs, i, yticks)
+            plot_hist(_scf, None, ax1_scf, i, yticks)
+            plot_hist(_ori, None, ax1_ori, i, yticks)
 
             t = '\t'
             print(name, t, np.mean(_na), t, np.std(_na), t, np.mean(_cs), t, np.std(_cs), t, np.mean(_scf), t, np.std(
@@ -138,49 +139,53 @@ def main():
     #    ax.set_zlabel('Z')
 
     # On the y axis let's only label the discrete values that we have data for.
-    ax_na.set_yticklabels(yticks)
-    ax_cs.set_yticklabels(yticks)
-    ax_scf.set_yticklabels(yticks)
-    ax_ori.set_yticklabels(yticks)
+    #ax_na.set_yticklabels(yticks)
+    #ax_cs.set_yticklabels(yticks)
+    #ax_scf.set_yticklabels(yticks)
+    #ax_ori.set_yticklabels(yticks)
 
 #    fig_na.tight_layout()
-    fig_na.savefig('3d_hist_na.png')
-    fig_na.show()
+#    fig_na.savefig('3d_hist_na.png')
+#    fig_na.show()
 
 #    fig_cs.tight_layout()
-    fig_cs.savefig('3d_hist_cs.png')
-    fig_cs.show()
+#    fig_cs.savefig('3d_hist_cs.png')
+#    fig_cs.show()
 
 #    fig_scf.tight_layout()
-    fig_scf.savefig('3d_hist_scf.png')
-    fig_scf.show()
+#    fig_scf.savefig('3d_hist_scf.png')
+#    fig_scf.show()
 
 #    fig_ori.tight_layout()
-    fig_ori.savefig('3d_hist_ori.png')
-    fig_ori.show()
+#    fig_ori.savefig('3d_hist_ori.png')
+#    fig_ori.show()
 
-#    fig1_na.tight_layout()
+    fig1_na.tight_layout()
     fig1_na.legend()
+
     #    fig1_na.grid()
     fig1_na.savefig('2s_hist_kde_na.png')
     fig1_na.show()
 
-#    fig1_cs.tight_layout()
+    fig1_cs.tight_layout()
     fig1_cs.legend()
+
     #    fig1_cs.grid()
-    fig1_cs.savefig('2s_hist_kde_cs.png')
+#    fig1_cs.savefig('2s_hist_kde_cs.png')
     fig1_cs.show()
 
-#    fig1_scf.tight_layout()
+    fig1_scf.tight_layout()
     fig1_scf.legend()
+
     #    fig1_scf.grid()
-    fig1_scf.savefig('2s_hist_kde_scf.png')
+#    fig1_scf.savefig('2s_hist_kde_scf.png')
     fig1_scf.show()
 
 #    fig1_ori.tight_layout()
     fig1_ori.legend()
+
     #    fig1_ori.grid()
-    fig1_ori.savefig('2s_hist_kde_ori.png')
+#    fig1_ori.savefig('2s_hist_kde_ori.png')
     fig1_ori.show()
 
     plt.show()
@@ -191,8 +196,8 @@ def main():
 def process(filename):
     data = np.load(filename)
 
-    label_img = skimage.measure.label(data, neighbors=4, background=0)
-    regions = skimage.measure.regionprops(label_img, coordinates='xy')
+    label_img = skimage.measure.label(data, background=0)
+    regions = skimage.measure.regionprops(label_img)
 
     area = np.zeros(len(regions))
     perimeter = np.zeros(len(regions))

@@ -97,222 +97,67 @@ def plot_hist(data, ax):
     plt.text(0.3, 0.88, s, transform=ax.transAxes, horizontalalignment='left', verticalalignment='center', fontsize=6)
 
 
-def vdk_perimeter(image):
-    (w, h) = image.shape
-    image = image.astype(np.uint8)
-    data = np.zeros((w + 2, h + 2), dtype=image.dtype)
-    data[1:-1, 1:-1] = image
-    dilat = skimage.morphology.binary_dilation(data)
-    newdata = dilat - data
-
-    kernel = np.array([[10, 2, 10],
-                       [2, 1, 2],
-                       [10, 2, 10]])
-
-    T = skimage.filters.edges.convolve(newdata, kernel, mode='constant', cval=0)
-
-    cat_a = np.array([5, 15, 7, 25, 27, 17])
-    cat_b = np.array([21, 33])
-    cat_c = np.array([13, 23])
-    cat_a_num = np.count_nonzero(np.isin(T, cat_a))
-    cat_b_num = np.count_nonzero(np.isin(T, cat_b))
-    cat_c_num = np.count_nonzero(np.isin(T, cat_c))
-
-    perim = cat_a_num + cat_b_num * np.sqrt(2.) + cat_c_num * (1. + np.sqrt(2.)) / 2.
-
-    return perim
-
-
 def main():
     np.random.seed()
 
-    fig, ax = plt.subplots(3, 2, figsize=(5.8, 8.3), dpi=300)
+
     cm = []
-    if True:
-        prob_matrix = get_pobability_matrix(2.0, 2.0 * 2.0 / 3.0, angle=45, verbose=False)
-        #prob_matrix = get_pobability_matrix(2.0, 2.0, angle=0, verbose=True)
 
-        left_prob_matrix = np.array([[1, 1, 0], [1, 1, 1], [0, 1, 1]], dtype=float)
-        right_prob_matrix = np.array([[0, 1, 1], [1, 1, 1], [1, 1, 0]], dtype=float)
+    #prob_matrix = get_pobability_matrix(2.0, 2.0 * 2.0 / 3.0, angle=45, verbose=False)
+    prob_matrix = get_pobability_matrix(2.0, 2.0, angle=0, verbose=False)
 
-        ca = MircoCellularAutomaton(100, 100, neighbour='custom', neighbour_matrix=prob_matrix, periodic=False, animation=True)
-        #ca = MircoCellularAutomaton(513, 565, neighbour='moore', periodic=False, animation=True)
-        #ca = MircoCellularAutomaton(513, 565, neighbour='von_neumann', periodic=False, animation=True)
+    left_prob_matrix = np.array([[1, 1, 0], [1, 1, 1], [0, 1, 1]], dtype=float)
+    right_prob_matrix = np.array([[0, 1, 1], [1, 1, 1], [1, 1, 0]], dtype=float)
+    Num_grains = 714
+    call = lambda n: Num_grains * 0.3 * scipy.stats.norm.cdf(n, 3, 1) + Num_grains *0.7 * scipy.stats.norm.cdf(n, 20, 5)
+    #call = lambda n: Num_grains * scipy.stats.norm.cdf(n, 20, 2)
 
-        #ca = MircoCellularAutomaton(513, 565, neighbour='custom', neighbour_matrix=left_prob_matrix, periodic=False, animation=True)
-        #ca = MircoCellularAutomaton(513, 565, neighbour='custom', neighbour_matrix=right_prob_matrix, periodic=False, animation=True)
-
-
-        Num_grains = 714
-        #ca.initial_cells(Num_grains)
-        ca.initial_cell_mesh()
-
-        colors = np.empty((Num_grains, 4))
-        colors[0] = [1., 1., 1., 1.]  # white background
-        for i in range(1, Num_grains):
-            colors[i] = [np.random.random_sample(), np.random.random_sample(), np.random.random_sample(), 1]
-
-        cm = ListedColormap(colors, name='my_list')
-
-        #
-        while False:
-            is_converged = ca.calculate(verbose=True, max_iter=5)
-            if is_converged:
-                break
-            fig1 = plt.figure(figsize=(3, 3))
-            ax1 = fig1.add_subplot(111)
-            ax1.imshow(ca.data, interpolation='none', cmap=cm)
-            fig1.tight_layout()
-            fig1.show()
-        else:
-            ca.calculate(verbose=True)
-        data = ca.data
-
-        #ca.save_animation_mpeg('elipse_prob.avi')
-        #ca.save_animation_gif('elipse_prob.gif')
-
-        bwimage = ca.to_black_and_white()
-        ax[0, 0].imshow(data, interpolation='none', cmap=cm)
-
-        fig_m = plt.figure(figsize=(5.65, 5.13), dpi=300)
-        ax_m = fig_m.add_subplot(1, 1, 1)
-
-        ax_m.imshow(ca.data, interpolation='none', cmap=cm)
-        ax_m.set_yticklabels([])
-        ax_m.set_xticklabels([])
-        fig_m.tight_layout()
-        fig_m.savefig('ellipse_micro.png', dpi=300)
-        fig_m.show()
-
-        np.save("./models/test", ca.data)
-
-    else:
-
-        image = imread('fig-2.gif', as_grey=True)
-        from skimage import filters
-        print(threshold_isodata(image))
-        face = image
-        #        plt.imshow(face)
-        #        plt.show()
-        face1d = face.reshape(face.size)
-
-        hist, bin_edges = np.histogram(face1d, bins=256, density=True)
-        bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
-        inthist = cumtrapz(hist, bin_centers, initial=0)
-        alpha = 0.05
-        lc = bin_centers[np.argmin(np.abs(inthist - alpha))]
-        rc = bin_centers[np.argmin(np.abs(inthist - (1.0 - alpha)))]
-        fval = (lc + rc) / 2.0
-
-        thresh = threshold_otsu(image)
-        print(fval, thresh)
-        bw = np.zeros_like(image)
-        bw[image > 0.781] = 1.
-        data = bw
-        # bw = skimage.morphology.opening(bw,  skimage.morphology.square(3))
-        # bw = skimage.morphology.opening(bw)
-        bwimage = bw
-        # plt.imshow(bw, interpolation='none', cmap='gray')
-        # plt.tight_layout()
-        # plt.show()
-        ax[0, 0].imshow(data, interpolation='none', cmap='gray')
-
-        fig_m = plt.figure(figsize=(5.65, 5.13), dpi=300)
-        ax_m = fig_m.add_subplot(1, 1, 1)
-
-        ax_m.imshow(image, interpolation='none', cmap='gray')
-        ax_m.set_yticklabels([])
-        ax_m.set_xticklabels([])
-        fig_m.tight_layout()
-        fig_m.savefig('micro.png', dpi=300)
-        fig_m.show()
-
-        np.save("./models/pure-micro", data)
-
-    (w, h) = data.shape
-    ax[0, 0].axis((0, h, w, 0))
-
-    exit()
-    label_img = skimage.measure.label(data, neighbors=4, background=0)
-    regions = skimage.measure.regionprops(label_img, coordinates='xy')
-
-    area = np.zeros(len(regions))
-    perimeter = np.zeros(len(regions))
-    orient = np.zeros(len(regions))
-    scale_factor = np.zeros(len(regions))
-
-    i = 0
-    for props in regions:
-        if props.area < 10:
-            continue
-        y0, x0 = props.centroid
-        area[i] = props.area
-        perimeter[i] = np.max([props.perimeter, vdk_perimeter(props.convex_image)])
-        # perimeter[i] = vdk_perimeter(props.convex_image)
-        orientation = props.orientation
-        orient[i] = props.orientation
-        if props.minor_axis_length:
-            scale_factor[i] = props.major_axis_length / props.minor_axis_length
-        else:
-            scale_factor[i] = np.inf
-        x1 = x0 + np.cos(orientation) * 0.5 * props.major_axis_length
-        y1 = y0 - np.sin(orientation) * 0.5 * props.major_axis_length
-        x2 = x0 - np.sin(orientation) * 0.5 * props.minor_axis_length
-        y2 = y0 - np.cos(orientation) * 0.5 * props.minor_axis_length
-
-        ax[0, 1].plot((x0, x1), (y0, y1), '-r', linewidth=0.5)
-        ax[0, 1].plot((x0, x2), (y0, y2), '-r', linewidth=0.5)
-
-        ax[0, 1].plot(x0, y0, '.r', markersize=1)
-
-        cs_i = 4. * np.pi * area[i] / (perimeter[i] ** 2)
-        print(i)
-        if cs_i > 1:
-            plt.close()
-            print(i, cs_i, props._slice, area[i], perimeter[i], vdk_perimeter(props.convex_image))
-            plt.imshow(props.convex_image)
-            plt.show()
-
-        i += 1
-
-    print('Image size =', data.shape)
-    print('Num of detected grains = ', i)
-    print('Grains per square pixel =', float(i) / w / h)
-
-    ax[0, 1].axis((0, h, w, 0))
-    # ax[0, 1].plot(ca.centers[1, :], ca.centers[0, :], '.g', markersize=1)
-    ax[0, 1].imshow(bwimage, interpolation='none', cmap='gray')
-    ax[0, 1].legend()
-
-    cond = np.logical_and(area > 10, scale_factor < np.inf)
-    area = area[cond]
-    perimeter = perimeter[cond]
-    orient = orient[cond]
-    scale_factor = scale_factor[cond]
-
-    norm_area = area / w / h
-    cs = 4. * np.pi * area / (perimeter ** 2)
-
-    # print label_img, regions
-
-    plot_hist(norm_area, ax[1, 0])
-    plot_hist(cs, ax[1, 1])
-    plot_hist(scale_factor, ax[2, 1])
-
-    ax[2, 0].hist(orient)
-
-    plt.tight_layout()
-    plt.savefig('diag.png')
+    n = np.arange(0, 100, 1)
+    plt.plot(n, call(n))
     plt.show()
 
-    # np.savetxt('img20.txt',ca.data, delimiter=';')
+    ca = MircoCellularAutomaton(513, 565, neighbour='custom', neighbour_matrix=prob_matrix, periodic=False, animation=False, centers_func=call)
+    # ca = MircoCellularAutomaton(513, 565, neighbour='moore', periodic=False, animation=True)
+    # ca = MircoCellularAutomaton(513, 565, neighbour='von_neumann', periodic=False, animation=True)
 
-    # print norm_area.size, Cs.size, orient.size, scale_factor.size
+    # ca = MircoCellularAutomaton(513, 565, neighbour='custom', neighbour_matrix=left_prob_matrix, periodic=False, animation=True)
+    # ca = MircoCellularAutomaton(513, 565, neighbour='custom', neighbour_matrix=right_prob_matrix, periodic=False, animation=True)
 
-    # t = '\t'
-    # print 'norm_area[i]', t, 'Cs[i]', t, 'orient', t, 'scale_factor'
-    # for i in range(norm_area.size):
-    #    print norm_area[i], t, Cs[i], t, orient[i], t, scale_factor[i]
+
+    # ca.initial_cells(Num_grains)
+    # ca.initial_cell_mesh()
+
+    colors = np.empty((Num_grains, 4))
+    colors[0] = [1., 1., 1., 1.]  # white background
+    for i in range(1, Num_grains):
+        colors[i] = [np.random.random_sample(), np.random.random_sample(), np.random.random_sample(), 1]
+
+    cm = ListedColormap(colors, name='my_list')
+
+    #
+    while False:
+        is_converged = ca.calculate(verbose=True, max_iter=5)
+        if is_converged:
+            break
+        fig1 = plt.figure(figsize=(3, 3))
+        ax1 = fig1.add_subplot(111)
+        ax1.imshow(ca.data, interpolation='none', cmap=cm)
+        fig1.tight_layout()
+        fig1.show()
+    else:
+        ca.calculate(verbose=True)
+
+    data = ca.data
+
+    # ca.save_animation_mpeg('elipse_prob.avi')
+    # ca.save_animation_gif('elipse_prob.gif')
+
+    #bwimage = ca.to_black_and_white()
+
+    plt.imshow(data, interpolation='none', cmap=cm)
+    plt.show()
+
+    np.save("./models2/test", ca.data)
 
 
 main()

@@ -36,7 +36,7 @@ def formulate_stiff_matrix(de):
     e4 = de.get_avg_strain_tensor(7)
     s4 = de.get_avg_stress_tensor(7)
 
-    """"
+    """
     print('-----------')
     print(e1)
     print(s1)
@@ -83,14 +83,15 @@ def make_sym_matrix(v):
 
 
 def yild_surface():
-    #filename = "./models/test.npy"
-    #data = np.load(filename)
-    #data[0, 0] = 1
-    #data[-1, -1] = 100
+    # filename = "./models/test.npy"
+    # data = np.load(filename)
+    # data[0, 0] = 1
+    # data[-1, -1] = 100
 
     nn = 20
-    data = np.random.randint(low=1, high=nn-1, size=(nn, nn))
-    de = ExportToDamask.DamaskExporter(data=data, project_name="vdk_test", project_dir="/home/oleksii/PycharmProjects/cellular-automaton/../ex-dam/")
+    data = np.random.randint(low=1, high=nn - 1, size=(nn, nn))
+    de = ExportToDamask.DamaskExporter(data=data, project_name="vdk_test",
+                                       project_dir="/home/oleksii/PycharmProjects/cellular-automaton/../ex-dam/")
 
     npo = 100
     phi = np.linspace(0, 2 * np.pi, npo, endpoint=True, dtype=np.double)
@@ -122,7 +123,7 @@ def yild_surface():
     yield_stress_value = 31e6
     yield_stress = np.zeros([npo, 3])
     for i in range(npo):
-        de.load_by_ls_num(i+1)
+        de.load_by_ls_num(i + 1)
         s = de.get_stress_vonMizes()
         maxs_sorted = np.sort(s)
         maxs = maxs_sorted[int(maxs_sorted.size * 0.95)] / yield_stress_value
@@ -130,29 +131,34 @@ def yild_surface():
         s_avg = de.get_avg_stress_tensor(i + 1)
         s_principals, _ = np.linalg.eig(s_avg)
         s_principals = np.array([s_avg[0, 0], s_avg[1, 1], 0])
-        #print(s_principals)
+        # print(s_principals)
         print(s_avg)
         # s_principals = np.sort(s_principals)
         yield_stress[i] = s_principals / maxs
 
     plt.scatter(yield_stress[:, 0], yield_stress[:, 1])
-    #plt.show()
+    # plt.show()
     # de.get_
 
 
 def main():
     filename = "./models/test.npy"
-    #mdreed         data = np.load(filename)
-    #data[0, 0] = 1
-    #data[-1, -1] = 100
+    # mdreed         data = np.load(filename)
+    # data[0, 0] = 1
+    # data[-1, -1] = 100
 
     # data = np.array([[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]])
-    # data = np.full([50, 50], 1)
+    data = np.full([3, 3], 1)
 
-    nn = 50
-    data = np.random.randint(low=1, high=nn-1, size=(nn, nn))
+    nn = 5
+    data = np.random.randint(low=1, high=2 * nn - 1, size=(nn, nn))
+    #data = np.zeros([nn, nn], dtype=np.int)
+    #for i in range(nn // 10):
+    #    for j in range(nn // 10):
+    #        data[i * 10:(i + 1) * 10, j * 10:(j + 1) * 10] = i + j + 1
 
-    de = ExportToDamask.DamaskExporter(data=data, project_name="vdk_test", project_dir="/home/oleksii/PycharmProjects/cellular-automaton/../ex-dam/")
+    de = ExportToDamask.DamaskExporter(data=data, project_name="vdk_test",
+                                       project_dir="/home/oleksii/PycharmProjects/cellular-automaton/../ex-dam/")
 
     de.tension_x()
     de.tension_y()
@@ -235,7 +241,7 @@ def main():
 
 
 if __name__ == "__main__":
-    # main()
-    for i in range(5):
-        yild_surface()
-    plt.show()
+    main()
+    # for i in range(5):
+    #    yild_surface()
+    # plt.show()
