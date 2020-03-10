@@ -118,7 +118,7 @@ class MircoCellularAutomaton:
             num = 0
             return
 
-        print("It_num={}, Cell num = {}, new cells = {}".format(self.it_number,self.num_of_cells, num))
+        print("It_num={}, Cell num = {}, new cells = {}".format(self.it_number, self.num_of_cells, num))
 
         if num_of_free_cell < num * 2:
             return
@@ -126,7 +126,7 @@ class MircoCellularAutomaton:
             x = np.random.randint(self.w)
             y = np.random.randint(self.h)
             if not self.data[x, y]:
-                self.data[x, y] = self.num_of_cells
+                self.data[x, y] = self.num_of_cells + 1
                 i += 1
                 self.num_of_cells += 1
         pass

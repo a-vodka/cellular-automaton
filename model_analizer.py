@@ -98,10 +98,10 @@ def main():
     #ax_scf = fig_scf.add_subplot(111, projection='3d')
     #ax_ori = fig_ori.add_subplot(111, projection='3d')
 
-    fig1_na = plt.figure(dpi=300)
-    fig1_cs = plt.figure(dpi=300)
-    fig1_scf = plt.figure(dpi=300)
-    fig1_ori = plt.figure(dpi=300)
+    fig1_na = plt.figure(dpi=100)
+    fig1_cs = plt.figure(dpi=100)
+    fig1_scf = plt.figure(dpi=100)
+    fig1_ori = plt.figure(dpi=100)
 
     ax1_na = fig1_na.add_subplot(111, title="Na")
     ax1_cs = fig1_cs.add_subplot(111, title="Cs")

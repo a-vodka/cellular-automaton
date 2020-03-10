@@ -100,29 +100,35 @@ def plot_hist(data, ax):
 def main():
     np.random.seed()
 
-
     cm = []
 
-    #prob_matrix = get_pobability_matrix(2.0, 2.0 * 2.0 / 3.0, angle=45, verbose=False)
-    prob_matrix = get_pobability_matrix(2.0, 2.0, angle=0, verbose=False)
+    # prob_matrix = get_pobability_matrix(2.0, 2.0 * 2.0 / 3.0, angle=45, verbose=False)
+    prob_matrix = get_pobability_matrix(1.6, 2.0, angle=0, verbose=True)
 
     left_prob_matrix = np.array([[1, 1, 0], [1, 1, 1], [0, 1, 1]], dtype=float)
     right_prob_matrix = np.array([[0, 1, 1], [1, 1, 1], [1, 1, 0]], dtype=float)
     Num_grains = 714
-    call = lambda n: Num_grains * 0.3 * scipy.stats.norm.cdf(n, 3, 1) + Num_grains *0.7 * scipy.stats.norm.cdf(n, 20, 5)
-    #call = lambda n: Num_grains * scipy.stats.norm.cdf(n, 20, 2)
+    # call = lambda n: Num_grains * 0.2 * scipy.stats.norm.cdf(n, 3, 1) + Num_grains *0.8 * scipy.stats.norm.cdf(n, 25, 5)
+    # call = lambda n: Num_grains * scipy.stats.norm.cdf(n, 20, 2)
+
+    def ngr(n):
+        res = np.array( np.exp( 0.1*(n+30) )-1)
+        #res[res > Num_grains] = Num_grains
+        return res
+
+    call = ngr
 
     n = np.arange(0, 100, 1)
     plt.plot(n, call(n))
     plt.show()
 
-    ca = MircoCellularAutomaton(513, 565, neighbour='custom', neighbour_matrix=prob_matrix, periodic=False, animation=False, centers_func=call)
+    ca = MircoCellularAutomaton(513, 565, neighbour='custom', neighbour_matrix=prob_matrix, periodic=False,
+                                animation=False, centers_func=call)
     # ca = MircoCellularAutomaton(513, 565, neighbour='moore', periodic=False, animation=True)
     # ca = MircoCellularAutomaton(513, 565, neighbour='von_neumann', periodic=False, animation=True)
 
     # ca = MircoCellularAutomaton(513, 565, neighbour='custom', neighbour_matrix=left_prob_matrix, periodic=False, animation=True)
     # ca = MircoCellularAutomaton(513, 565, neighbour='custom', neighbour_matrix=right_prob_matrix, periodic=False, animation=True)
-
 
     # ca.initial_cells(Num_grains)
     # ca.initial_cell_mesh()
@@ -152,7 +158,7 @@ def main():
     # ca.save_animation_mpeg('elipse_prob.avi')
     # ca.save_animation_gif('elipse_prob.gif')
 
-    #bwimage = ca.to_black_and_white()
+    # bwimage = ca.to_black_and_white()
 
     plt.imshow(data, interpolation='none', cmap=cm)
     plt.show()
