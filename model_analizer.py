@@ -4,7 +4,7 @@ import scipy.signal
 import scipy.stats
 import skimage.measure
 from skimage.io import imread
-#from MircoCellularAutomaton import *
+# from MircoCellularAutomaton import *
 from scipy.integrate import cumtrapz
 from skimage.filters import threshold_otsu, threshold_isodata
 import skimage.morphology
@@ -12,6 +12,65 @@ from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 import os
 from mpl_toolkits.mplot3d import Axes3D
 from scipy.stats import gaussian_kde
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
+
+def multiple_formatter(denominator=4, number=np.pi, latex='\pi'):
+    def gcd(a, b):
+        while b:
+            a, b = b, a % b
+        return a
+
+    def _multiple_formatter(x, pos):
+        den = denominator
+        num = np.int(np.rint(den * x / number))
+        com = gcd(num, den)
+        (num, den) = (int(num / com), int(den / com))
+        if den == 1:
+            if num == 0:
+                return r'$0$'
+            if num == 1:
+                return r'$%s$' % latex
+            elif num == -1:
+                return r'$-%s$' % latex
+            else:
+                return r'$%s%s$' % (num, latex)
+        else:
+            if num == 1:
+                return r'$\frac{%s}{%s}$' % (latex, den)
+            elif num == -1:
+                return r'$\frac{-%s}{%s}$' % (latex, den)
+            else:
+                return r'$\frac{%s%s}{%s}$' % (num, latex, den)
+
+    return _multiple_formatter
+
+
+class Multiple:
+    def __init__(self, denominator=4, number=np.pi, latex='\pi'):
+        self.denominator = denominator
+        self.number = number
+        self.latex = latex
+
+    def locator(self):
+        return plt.MultipleLocator(self.number / self.denominator)
+
+    def formatter(self):
+        return plt.FuncFormatter(multiple_formatter(self.denominator, self.number, self.latex))
+
+
+def rnd_cmap(n):
+    if n < 2:
+        n = 2
+    n = int(n)
+    colors = np.empty([n, 4])
+    colors[1] = [1., 1., 1., 1.]  # white background
+    colors[0] = [0., 0., 0., 1.]  # white background
+    for i in range(2, n):
+        colors[i] = [np.random.random_sample(), np.random.random_sample(), np.random.random_sample(), 1]
+
+    cm = ListedColormap(colors, name='my_list')
+    return cm
 
 
 def plot_hist(data, ax):
@@ -64,7 +123,7 @@ def plot_hist(data, ax, ax1, i, yticks):
     w = bin_edges[1] - bin_edges[0]
     # print hist, edg, bin_edges, w, yticks
 
-    #ax.bar(edg, hist, zs=i, zdir='y', alpha=0.8, width=w)
+    # ax.bar(edg, hist, zs=i, zdir='y', alpha=0.8, width=w)
     kde = gaussian_kde(data)
 
     xdata = np.linspace(data.min(), data.max(), 300)
@@ -88,16 +147,6 @@ def main():
     yticks = np.empty(numfiles, dtype='U25')
     i = 0
 
-    #fig_na = plt.figure(dpi=300)
-    #fig_cs = plt.figure(dpi=300)
-    #fig_scf = plt.figure(dpi=300)
-    #fig_ori = plt.figure(dpi=300)
-
-    #ax_na = fig_na.add_subplot(111, projection='3d')
-    #ax_cs = fig_cs.add_subplot(111, projection='3d')
-    #ax_scf = fig_scf.add_subplot(111, projection='3d')
-    #ax_ori = fig_ori.add_subplot(111, projection='3d')
-
     fig1_na = plt.figure(dpi=100)
     fig1_cs = plt.figure(dpi=100)
     fig1_scf = plt.figure(dpi=100)
@@ -108,6 +157,10 @@ def main():
     ax1_scf = fig1_scf.add_subplot(111, title="Scf")
     ax1_ori = fig1_ori.add_subplot(111, title="Orient")
 
+    ax1_ori.xaxis.set_major_locator(plt.MultipleLocator(np.pi / 4))
+    ax1_ori.xaxis.set_minor_locator(plt.MultipleLocator(np.pi / 12))
+    ax1_ori.xaxis.set_major_formatter(plt.FuncFormatter(multiple_formatter()))
+    ax1_ori.set_xlim(left=0, right=np.pi)
 
     for name in files:
 
@@ -115,9 +168,9 @@ def main():
             break
 
         if name.endswith('.npy'):
-            #print name
+            # print name
             yticks[i] = name.replace('.npy', '')
-            _na, _cs, _scf, _ori = process(path + name)
+            _na, _cs, _scf, _ori = process(path + name, plot_hist=True, plot_orientation=True)
             # norm_area[i, :_na.size] = _na
             # cs[i, :_cs.size] = _cs
             # scale_factor[i, :_scf.size] = _scf
@@ -134,32 +187,6 @@ def main():
 
             i += 1
 
-    #    ax.set_xlabel('X')
-    #    ax.set_ylabel('Y')
-    #    ax.set_zlabel('Z')
-
-    # On the y axis let's only label the discrete values that we have data for.
-    #ax_na.set_yticklabels(yticks)
-    #ax_cs.set_yticklabels(yticks)
-    #ax_scf.set_yticklabels(yticks)
-    #ax_ori.set_yticklabels(yticks)
-
-#    fig_na.tight_layout()
-#    fig_na.savefig('3d_hist_na.png')
-#    fig_na.show()
-
-#    fig_cs.tight_layout()
-#    fig_cs.savefig('3d_hist_cs.png')
-#    fig_cs.show()
-
-#    fig_scf.tight_layout()
-#    fig_scf.savefig('3d_hist_scf.png')
-#    fig_scf.show()
-
-#    fig_ori.tight_layout()
-#    fig_ori.savefig('3d_hist_ori.png')
-#    fig_ori.show()
-
     fig1_na.tight_layout()
     fig1_na.legend()
 
@@ -171,21 +198,21 @@ def main():
     fig1_cs.legend()
 
     #    fig1_cs.grid()
-#    fig1_cs.savefig('2s_hist_kde_cs.png')
+    #    fig1_cs.savefig('2s_hist_kde_cs.png')
     fig1_cs.show()
 
     fig1_scf.tight_layout()
     fig1_scf.legend()
 
     #    fig1_scf.grid()
-#    fig1_scf.savefig('2s_hist_kde_scf.png')
+    #    fig1_scf.savefig('2s_hist_kde_scf.png')
     fig1_scf.show()
 
-#    fig1_ori.tight_layout()
+    #    fig1_ori.tight_layout()
     fig1_ori.legend()
 
     #    fig1_ori.grid()
-#    fig1_ori.savefig('2s_hist_kde_ori.png')
+    #    fig1_ori.savefig('2s_hist_kde_ori.png')
     fig1_ori.show()
 
     plt.show()
@@ -193,7 +220,7 @@ def main():
     pass
 
 
-def process(filename):
+def process(filename, plot_orientation=False, plot_hist=False):
     data = np.load(filename)
 
     label_img = skimage.measure.label(data, background=0)
@@ -203,38 +230,50 @@ def process(filename):
     perimeter = np.zeros(len(regions))
     orient = np.zeros(len(regions))
     scale_factor = np.zeros(len(regions))
+    x = np.zeros(len(regions))
+    y = np.zeros(len(regions))
 
-    # fig, ax = plt.subplots(3, 2, figsize=(5.8, 8.3), dpi=300)
+    fig, ax = plt.subplots(1, 1)
+    fig.tight_layout()
+    ax.set_aspect(1.)
+
     (w, h) = data.shape
     bwimage = data
 
     i = 0
     for props in regions:
         if props.area < 10:
+            # print("warning: in {} ares of cell {} is {}".format(filename, i, props.area))
             continue
+
         y0, x0 = props.centroid
+        x[i], y[i] = x0, y0
+
         area[i] = props.area
         perimeter[i] = np.max([props.perimeter, vdk_perimeter(props.convex_image)])
         # perimeter[i] = vdk_perimeter(props.convex_image)
-        orientation = props.orientation
-        orient[i] = props.orientation
+
+        orient[i] = props.orientation + np.pi / 2
         if props.minor_axis_length:
             scale_factor[i] = props.major_axis_length / props.minor_axis_length
         else:
             scale_factor[i] = np.inf
-        x1 = x0 + np.cos(orientation) * 0.5 * props.major_axis_length
-        y1 = y0 - np.sin(orientation) * 0.5 * props.major_axis_length
-        x2 = x0 - np.sin(orientation) * 0.5 * props.minor_axis_length
-        y2 = y0 - np.cos(orientation) * 0.5 * props.minor_axis_length
+            print("warning: scale factor for {} cell if infinity".format(i))
 
-        # ax[0, 1].plot((x0, x1), (y0, y1), '-r', linewidth=0.5)
-        # ax[0, 1].plot((x0, x2), (y0, y2), '-r', linewidth=0.5)
+        if plot_orientation:
+            x1 = x0 + np.cos(orient[i]) * 0.5 * props.major_axis_length
+            y1 = y0 - np.sin(orient[i]) * 0.5 * props.major_axis_length
+            x2 = x0 - np.sin(orient[i]) * 0.5 * props.minor_axis_length
+            y2 = y0 - np.cos(orient[i]) * 0.5 * props.minor_axis_length
 
-        # ax[0, 1].plot(x0, y0, '.r', markersize=1)
+            ax.plot((x0, x1), (y0, y1), '-r', linewidth=0.5)
+            ax.plot((x0, x2), (y0, y2), '-g', linewidth=0.5)
+            ax.plot(x0, y0, '.r', markersize=1)
 
         cs_i = 4. * np.pi * area[i] / (perimeter[i] ** 2)
 
         if cs_i > 1:
+            print("warning: Cs for {} cell > 1".format(i))
             plt.close()
             print(i, cs_i, props._slice, area[i], perimeter[i], vdk_perimeter(props.convex_image))
             plt.imshow(props.convex_image)
@@ -242,14 +281,27 @@ def process(filename):
 
         i += 1
 
-#    print 'Image size =', data.shape
-#    print 'Num of detected grains = ', i
-#    print 'Grains per square pixel =', float(i) / w / h
-
-    # ax[0, 1].axis((0, h, w, 0))
+    ax.axis((0, h, w, 0))
     # ax[0, 1].plot(ca.centers[1, :], ca.centers[0, :], '.g', markersize=1)
-    # ax[0, 1].imshow(bwimage, interpolation='none', cmap='gray')
-    # ax[0, 1].legend()
+    ax.imshow(bwimage, interpolation='none', cmap=rnd_cmap(np.max(bwimage)), origin="lower")
+
+    # ax.legend()
+    if plot_hist:
+        # create new axes on the right and on the top of the current axes
+        # The first argument of the new_vertical(new_horizontal) method is
+        # the height (width) of the axes to be created in inches.
+        divider = make_axes_locatable(ax)
+        axHistx = divider.append_axes("top", 1.2, pad=0.1, sharex=ax)
+        axHisty = divider.append_axes("right", 1.2, pad=0.1, sharey=ax)
+
+        # make some labels invisible
+        axHistx.xaxis.set_tick_params(labelbottom=False)
+        axHisty.yaxis.set_tick_params(labelleft=False)
+
+        bins = int(np.sqrt(i))
+
+        axHistx.hist(x, edgecolor="black", bins=bins)
+        axHisty.hist(y, orientation='horizontal', edgecolor="black", bins=bins)
 
     cond = np.logical_and(area > 10, scale_factor < np.inf)
     area = area[cond]
@@ -257,31 +309,16 @@ def process(filename):
     orient = orient[cond]
     scale_factor = scale_factor[cond]
 
+    print('Image size =', data.shape)
+    print('Number of pixels =', w * h)
+    print('Num of detected grains = ', area.size)
+    print('Grains per square pixel =', float(i) / w / h)
+
     norm_area = area / w / h
     cs = 4. * np.pi * area / (perimeter ** 2)
 
-    # print label_img, regions
-
     return norm_area, cs, scale_factor, orient
 
-    # plot_hist(norm_area, ax[1, 0])
-    # plot_hist(cs, ax[1, 1])
-    # plot_hist(scale_factor, ax[2, 1])
 
-    # ax[2, 0].hist(orient)
-
-    # plt.tight_layout()
-    # plt.savefig('diag.png')
-    # plt.show()
-
-    # np.savetxt('img20.txt',ca.data, delimiter=';')
-
-    # print norm_area.size, Cs.size, orient.size, scale_factor.size
-
-    # t = '\t'
-    # print 'norm_area[i]', t, 'Cs[i]', t, 'orient', t, 'scale_factor'
-    # for i in range(norm_area.size):
-    #    print norm_area[i], t, Cs[i], t, orient[i], t, scale_factor[i]
-
-
-main()
+if __name__ == "__main__":
+    main()

@@ -73,8 +73,11 @@ def get_pobability_matrix(rx, ry, angle=0, w=999, h=999, verbose=False):
                         transform=ax.transAxes)
 
         fig.tight_layout()
-        fig.savefig("prob_matirx5.png")
+        #fig.savefig("./neibours/prob_matirx5.png", dpi=300)
+        #ig.savefig("./neibours/prob_matirx5.eps", dpi=300)
         fig.show()
+        plt.show()
+        plt.close()
 
     return prob_matrix
 
@@ -103,27 +106,36 @@ def main():
     cm = []
 
     # prob_matrix = get_pobability_matrix(2.0, 2.0 * 2.0 / 3.0, angle=45, verbose=False)
-    prob_matrix = get_pobability_matrix(1.6, 2.0, angle=0, verbose=True)
+    prob_matrix = get_pobability_matrix(1.7, 2.0, angle=0, verbose=True)
+
 
     left_prob_matrix = np.array([[1, 1, 0], [1, 1, 1], [0, 1, 1]], dtype=float)
     right_prob_matrix = np.array([[0, 1, 1], [1, 1, 1], [1, 1, 0]], dtype=float)
-    Num_grains = 714
+    Num_grains = 685
+
     # call = lambda n: Num_grains * 0.2 * scipy.stats.norm.cdf(n, 3, 1) + Num_grains *0.8 * scipy.stats.norm.cdf(n, 25, 5)
     # call = lambda n: Num_grains * scipy.stats.norm.cdf(n, 20, 2)
 
     def ngr(n):
-        res = np.array( np.exp( 0.1*(n+30) )-1)
-        #res[res > Num_grains] = Num_grains
+        # res = np.array(np.exp(0.05 * (n - 1)) - 1)
+        #res = np.array(0.008 * n ** 3)
+
+        res = np.array( 10 * n )
+
+        # res[res > Num_grains] = Num_grains
         return res
 
-    call = ngr
-
     n = np.arange(0, 100, 1)
-    plt.plot(n, call(n))
+    plt.plot(n, ngr(n))
+    plt.xlim([np.min(n), np.max(n)])
+    plt.ylim([0, None])
+    plt.xlabel("Iteration number, n")
+    plt.ylabel("Number of grains, N")
+    plt.grid()
     plt.show()
 
     ca = MircoCellularAutomaton(513, 565, neighbour='custom', neighbour_matrix=prob_matrix, periodic=False,
-                                animation=False, centers_func=call)
+                                animation=False, centers_func=ngr)
     # ca = MircoCellularAutomaton(513, 565, neighbour='moore', periodic=False, animation=True)
     # ca = MircoCellularAutomaton(513, 565, neighbour='von_neumann', periodic=False, animation=True)
 
@@ -164,6 +176,9 @@ def main():
     plt.show()
 
     np.save("./models2/test", ca.data)
+    print("------ Starting model analyzer ------")
+    import model_analizer
+    model_analizer.main()
 
 
 main()
