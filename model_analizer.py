@@ -152,15 +152,24 @@ def main():
     fig1_scf = plt.figure(dpi=100)
     fig1_ori = plt.figure(dpi=100)
 
-    ax1_na = fig1_na.add_subplot(111, title="Na")
-    ax1_cs = fig1_cs.add_subplot(111, title="Cs")
-    ax1_scf = fig1_scf.add_subplot(111, title="Scf")
-    ax1_ori = fig1_ori.add_subplot(111, title="Orient")
+    ax1_na = fig1_na.add_subplot(111, title="$N_a$")
+    ax1_cs = fig1_cs.add_subplot(111, title="$C_s$")
+    ax1_scf = fig1_scf.add_subplot(111, title="$S_c$")
+    ax1_ori = fig1_ori.add_subplot(111, title=r"$\psi$")
+
+    ax1_na.grid(True)
+    ax1_cs.grid(True)
+    ax1_scf.grid(True)
+    ax1_ori.grid(True)
 
     ax1_ori.xaxis.set_major_locator(plt.MultipleLocator(np.pi / 4))
     ax1_ori.xaxis.set_minor_locator(plt.MultipleLocator(np.pi / 12))
     ax1_ori.xaxis.set_major_formatter(plt.FuncFormatter(multiple_formatter()))
     ax1_ori.set_xlim(left=0, right=np.pi)
+
+    ax1_scf.set_xlim(left=1, right=5)
+    ax1_cs.set_xlim(left=0.1, right=0.8)
+    ax1_na.set_xlim(left=0, right=0.02)
 
     for name in files:
 
@@ -189,30 +198,26 @@ def main():
 
     fig1_na.tight_layout()
     fig1_na.legend()
-
-    #    fig1_na.grid()
-    fig1_na.savefig('2s_hist_kde_na.png')
+    fig1_na.savefig('2s_hist_kde_na.png', dpi=300)
+    fig1_na.savefig('2s_hist_kde_na.eps', dpi=300)
     fig1_na.show()
 
     fig1_cs.tight_layout()
     fig1_cs.legend()
-
-    #    fig1_cs.grid()
-    #    fig1_cs.savefig('2s_hist_kde_cs.png')
+    fig1_cs.savefig('2s_hist_kde_cs.png', dpi=300)
+    fig1_cs.savefig('2s_hist_kde_cs.eps', dpi=300)
     fig1_cs.show()
 
     fig1_scf.tight_layout()
     fig1_scf.legend()
-
-    #    fig1_scf.grid()
-    #    fig1_scf.savefig('2s_hist_kde_scf.png')
+    fig1_scf.savefig('2s_hist_kde_scf.png', dpi=300)
+    fig1_scf.savefig('2s_hist_kde_scf.eps', dpi=300)
     fig1_scf.show()
 
-    #    fig1_ori.tight_layout()
+    fig1_ori.tight_layout()
     fig1_ori.legend()
-
-    #    fig1_ori.grid()
-    #    fig1_ori.savefig('2s_hist_kde_ori.png')
+    fig1_ori.savefig('2s_hist_kde_ori.png', dpi=300)
+    fig1_ori.savefig('2s_hist_kde_ori.eps', dpi=300)
     fig1_ori.show()
 
     plt.show()
@@ -222,6 +227,9 @@ def main():
 
 def process(filename, plot_orientation=False, plot_hist=False):
     data = np.load(filename)
+
+    base = os.path.basename(filename)
+    file_title = os.path.splitext(base)[0]
 
     label_img = skimage.measure.label(data, background=0)
     regions = skimage.measure.regionprops(label_img)
@@ -235,7 +243,7 @@ def process(filename, plot_orientation=False, plot_hist=False):
 
     fig, ax = plt.subplots(1, 1)
     fig.tight_layout()
-    ax.set_aspect(1.)
+    #ax.set_aspect(1.)
 
     (w, h) = data.shape
     bwimage = data
@@ -285,6 +293,7 @@ def process(filename, plot_orientation=False, plot_hist=False):
     # ax[0, 1].plot(ca.centers[1, :], ca.centers[0, :], '.g', markersize=1)
     ax.imshow(bwimage, interpolation='none', cmap=rnd_cmap(np.max(bwimage)), origin="lower")
 
+
     # ax.legend()
     if plot_hist:
         # create new axes on the right and on the top of the current axes
@@ -302,6 +311,9 @@ def process(filename, plot_orientation=False, plot_hist=False):
 
         axHistx.hist(x, edgecolor="black", bins=bins)
         axHisty.hist(y, orientation='horizontal', edgecolor="black", bins=bins)
+
+    fig.tight_layout()
+    fig.savefig("./output/" + file_title + '_micro.png', dpi=300)
 
     cond = np.logical_and(area > 10, scale_factor < np.inf)
     area = area[cond]

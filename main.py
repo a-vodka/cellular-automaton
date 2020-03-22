@@ -73,8 +73,8 @@ def get_pobability_matrix(rx, ry, angle=0, w=999, h=999, verbose=False):
                         transform=ax.transAxes)
 
         fig.tight_layout()
-        #fig.savefig("./neibours/prob_matirx5.png", dpi=300)
-        #ig.savefig("./neibours/prob_matirx5.eps", dpi=300)
+        # fig.savefig("./neibours/prob_matirx5.png", dpi=300)
+        # ig.savefig("./neibours/prob_matirx5.eps", dpi=300)
         fig.show()
         plt.show()
         plt.close()
@@ -100,42 +100,91 @@ def plot_hist(data, ax):
     plt.text(0.3, 0.88, s, transform=ax.transAxes, horizontalalignment='left', verticalalignment='center', fontsize=6)
 
 
+Num_grains = 685
+n_p = 100
+
+
+def n_grain_pow3(n):
+    res = np.array(Num_grains / n_p ** 3 * n ** 3)
+    return res
+
+
+def n_grain_linear(n):
+    res = np.array(Num_grains / n_p * n)
+    return res
+
+
+def n_grain_exp(n):
+    res = np.array(np.exp(np.log(Num_grains) / n_p * n) - 1)
+    return res
+
+
+def n_grain_cdf(n):
+    res = np.array(Num_grains * scipy.stats.norm.cdf(n, n_p / 2, np.sqrt(Num_grains) / 2))
+    return res
+
+
+def n_grain_revexp(n):
+    res = np.array(Num_grains * (1 - np.exp(- n_p / Num_grains / 2 * n)))
+    return res
+
+
+def n_grain_const(n):
+    return 0 * n + Num_grains
+
+
+def plt_n_grain_funcs():
+    n = np.arange(0, 101, 1)
+    plt.plot(n, n_grain_linear(n), label='Linear')
+    plt.plot(n, n_grain_exp(n), label='Exponential')
+    plt.plot(n, n_grain_pow3(n), label='Cubic')
+    plt.plot(n, n_grain_cdf(n), label='Normal CDF')
+    plt.plot(n, n_grain_revexp(n), label='1 - exp(...)')
+    plt.xlim([np.min(n), np.max(n)])
+    plt.ylim([0, None])
+    plt.xlabel("Iteration number, n")
+    plt.ylabel("Number of grains, N")
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig('nucleation.png', dpi=300)
+    plt.savefig('nucleation.eps', dpi=300)
+
+    plt.show()
+    plt.close()
+
+    plt.plot(n, np.diff(n_grain_linear(n), prepend=n_grain_linear(-1)), label='Linear')
+    plt.plot(n, np.diff(n_grain_exp(n), prepend=0), label='Exponential')
+    plt.plot(n, np.diff(n_grain_pow3(n), prepend=0), label='Cubic')
+    plt.plot(n, np.diff(n_grain_cdf(n), prepend=0), label='Normal CDF')
+    plt.plot(n, np.diff(n_grain_revexp(n), prepend=n_grain_revexp(-1)), label='1 - exp(...)')
+    plt.xlim([np.min(n), np.max(n)])
+    plt.ylim([0, None])
+    plt.xlabel("Iteration number, n")
+    plt.ylabel("Nucleation rate, J")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig('nucleation-rate.png', dpi=300)
+    plt.savefig('nucleation-rate.eps', dpi=300)
+
+    plt.legend()
+    plt.grid()
+    plt.show()
+    pass
+
+
 def main():
     np.random.seed()
 
     cm = []
 
     # prob_matrix = get_pobability_matrix(2.0, 2.0 * 2.0 / 3.0, angle=45, verbose=False)
-    prob_matrix = get_pobability_matrix(1.7, 2.0, angle=0, verbose=True)
+    prob_matrix = get_pobability_matrix(1.7, 2.0, angle=0, verbose=False)
 
-
-    left_prob_matrix = np.array([[1, 1, 0], [1, 1, 1], [0, 1, 1]], dtype=float)
-    right_prob_matrix = np.array([[0, 1, 1], [1, 1, 1], [1, 1, 0]], dtype=float)
-    Num_grains = 685
-
-    # call = lambda n: Num_grains * 0.2 * scipy.stats.norm.cdf(n, 3, 1) + Num_grains *0.8 * scipy.stats.norm.cdf(n, 25, 5)
-    # call = lambda n: Num_grains * scipy.stats.norm.cdf(n, 20, 2)
-
-    def ngr(n):
-        # res = np.array(np.exp(0.05 * (n - 1)) - 1)
-        #res = np.array(0.008 * n ** 3)
-
-        res = np.array( 10 * n )
-
-        # res[res > Num_grains] = Num_grains
-        return res
-
-    n = np.arange(0, 100, 1)
-    plt.plot(n, ngr(n))
-    plt.xlim([np.min(n), np.max(n)])
-    plt.ylim([0, None])
-    plt.xlabel("Iteration number, n")
-    plt.ylabel("Number of grains, N")
-    plt.grid()
-    plt.show()
+    # plt_n_grain_funcs()
 
     ca = MircoCellularAutomaton(513, 565, neighbour='custom', neighbour_matrix=prob_matrix, periodic=False,
-                                animation=False, centers_func=ngr)
+                                animation=False, centers_func=n_grain_revexp)
     # ca = MircoCellularAutomaton(513, 565, neighbour='moore', periodic=False, animation=True)
     # ca = MircoCellularAutomaton(513, 565, neighbour='von_neumann', periodic=False, animation=True)
 
@@ -175,10 +224,10 @@ def main():
     plt.imshow(data, interpolation='none', cmap=cm)
     plt.show()
 
-    np.save("./models2/test", ca.data)
-    print("------ Starting model analyzer ------")
-    import model_analizer
-    model_analizer.main()
+    np.save("./models2/reverse-exp", ca.data)
+    # print("------ Starting model analyzer ------")
+    # import model_analizer
+    # model_analizer.main()
 
 
 main()

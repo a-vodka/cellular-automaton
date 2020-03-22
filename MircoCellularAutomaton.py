@@ -33,6 +33,9 @@ class MircoCellularAutomaton:
         self.animation_set = []
         self.animation_fig = plt.figure(dpi=150)
 
+        left_prob_matrix = np.array([[1, 1, 0], [1, 1, 1], [0, 1, 1]], dtype=float)
+        right_prob_matrix = np.array([[0, 1, 1], [1, 1, 1], [1, 1, 0]], dtype=float)
+
         self.centers_func = centers_func
 
     def von_neumann(self, i, j):
