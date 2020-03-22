@@ -93,7 +93,7 @@ class DamaskExporter:
 
         pass
 
-    def create_material_config(self, rand_orient=True):
+    def create_material_config(self, rand_orient=True, phase1=None, phase2=None):
 
         material_file = self.load_template
 
@@ -105,8 +105,15 @@ class DamaskExporter:
         for i in range(min_num, max_num, 1):
             material_file += "[Grain{0}]\n".format(i)
             material_file += "crystallite 1\n"
-            material_file += "(constituent) phase 1 texture {0} fraction 0.82\n".format(i)
-            material_file += "(constituent) phase 2 texture {0} fraction 0.18\n".format(i)
+            if phase1 is not None and phase2 is not None:
+                if i in phase1:
+                    material_file += "(constituent) phase 1 texture {0} fraction 1.0\n".format(i)
+                elif i in phase2:
+                    material_file += "(constituent) phase 2 texture {0} fraction 1.0\n".format(i)
+                else:
+                    material_file += "(constituent) phase 1 texture {0} fraction 1.0\n".format(i)
+            else:
+                material_file += "(constituent) phase 1 texture {0} fraction 1.0\n".format(i)
 
         material_file += "<texture>\n"
         for i in range(min_num, max_num, 1):
@@ -289,24 +296,27 @@ a_slip                  2.0
 # Tasan et.al. 2015 Acta Materalia
 # Tasan et.al. 2015 International Journal of Plasticity
 # Diehl et.al. 2015 Meccanica
-[BCC-Martensite]
+
+###---------------------------------------------------------------------------------------------------------------
+
+[Pearlite]
 
 elasticity              hooke
 plasticity              phenopowerlaw
 
-lattice_structure       bcc
-Nslip                   12  12                  # per family
-Ntwin                    0                      # per family
-c11                     417.4e9
-c12                     242.4e9
-c44                     211.1e9
-gdot0_slip              0.001
-n_slip                  20
-tau0_slip               405.8e6  456.7e6        # per family
-tausat_slip             872.9e6  971.2e6        # per family
-h0_slipslip             563.0e9
-interaction_slipslip    1 1 1.4 1.4 1.4 1.4
-a_slip                 2.0
+lattice_structure       isotropic
+c11                     297.0e9
+c12                     107.2e9
+m               3
+tau0            0.7e9
+gdot0           0.001
+n               20
+h0              0.728e9
+tausat          1.6e9
+a               2.25
+atol_resistance 1
+
+
 
 """
 

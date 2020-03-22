@@ -2,6 +2,9 @@ import ExportToDamask
 import numpy as np
 import matplotlib.pyplot as plt
 
+from MircoCellularAutomaton import *
+from matplotlib.colors import LinearSegmentedColormap, ListedColormap
+
 
 def pltVal(X, Y, Z):
     # print(X, Y, Z)
@@ -142,22 +145,49 @@ def yild_surface():
 
 
 def main():
-    filename = "./models/test.npy"
-    # mdreed         data = np.load(filename)
-    # data[0, 0] = 1
-    # data[-1, -1] = 100
+    Num_grains = 500
+    colors = np.empty((Num_grains + 1, 4))
+    colors[0] = [1., 1., 1., 1.]  # white background
+    for i in range(1, Num_grains):
+        colors[i] = [np.random.random_sample(), np.random.random_sample(), np.random.random_sample(), 1]
 
-    # data = np.array([[1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1]])
-    data = np.full([3, 3], 1)
+    colors[-1] = [0, 0, 0, 1]  # grain boundaries
+    cm = ListedColormap(colors, name='my_list')
 
-    nn = 5
-    data = np.random.randint(low=1, high=2 * nn - 1, size=(nn, nn))
-    #data = np.zeros([nn, nn], dtype=np.int)
-    #for i in range(nn // 10):
+    # nn = 50
+    # data = np.random.randint(low=1, high=2 * nn - 1, size=(nn, nn))
+    # data = np.zeros([nn, nn], dtype=np.int)
+    # for i in range(nn // 10):
     #    for j in range(nn // 10):
     #        data[i * 10:(i + 1) * 10, j * 10:(j + 1) * 10] = i + j + 1
 
-    de = ExportToDamask.DamaskExporter(data=data, project_name="vdk_test",
+    # ca = MircoCellularAutomaton(100, 100, neighbour='custom', neighbour_matrix=prob_matrix, periodic=False,
+    #                            animation=False, centers_func=ngr)
+
+    ca = MircoCellularAutomaton(500, 500, neighbour='moore', neighbour_matrix=None, periodic=False,
+                                animation=False, centers_func=None)
+
+    ca.initial_cells(Num_grains)
+    ca.calculate(verbose=True)
+    data = ca.data
+
+    # ca.save_animation_mpeg('elipse_prob.avi')
+    # ca.save_animation_gif('elipse_prob.gif')
+
+    b_image = ca.create_grain_boundaries()
+
+    u_phases = np.unique(b_image)
+    phase1 = u_phases[0:-1]
+    phase2 = np.array([u_phases[u_phases.size-1]])
+
+    print(phase1, phase2)
+
+    #plt.imshow(data, interpolation='none', cmap=cm)
+    #plt.show()
+    plt.imshow(b_image, interpolation='none', cmap=cm)
+    plt.show()
+
+    de = ExportToDamask.DamaskExporter(data=b_image, project_name="vdk_test",
                                        project_dir="/home/oleksii/PycharmProjects/cellular-automaton/../ex-dam/")
 
     de.tension_x()
@@ -167,7 +197,7 @@ def main():
     # de.tension_y_and_shear_xy()
 
     de.create_geom_file()
-    de.create_material_config(rand_orient=True)
+    de.create_material_config(rand_orient=True, phase1=phase1, phase2=phase2)
     de.run_damask()
     de.post_proc(avg_only=False)
     # de.load_by_ls_num(1)
@@ -204,6 +234,15 @@ def main():
     print('Sv = ', sv)
     # print(w)
     print('----')
+
+    Ex = 1.0 / S[0, 0]
+    Ey = 1.0 / S[1, 1]
+    Gxy = 1.0 / S[2, 2]
+    nuxy = - S[0, 1] * Ex
+    etaxxy = S[0, 2] * Gxy
+    etayxy = S[1, 2] * Gxy
+    print("Ex = {:g}, Ey = {:g}, Gxy = {:g}, nuxy = {:f}, etaxxy={:f}, etayxy= {:f}".format(Ex, Ey, Gxy, nuxy, etaxxy,
+                                                                                            etayxy))
 
     # print(de.get_stress_tensor())
     # print(de.get_strain_tensor())

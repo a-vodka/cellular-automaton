@@ -2,6 +2,10 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from matplotlib.colors import ListedColormap
+
+import skimage.draw
+import skimage.transform
 
 
 class MircoCellularAutomaton:
@@ -202,5 +206,95 @@ class MircoCellularAutomaton:
                     bw_image[i, j] = 0.
         return bw_image
 
+    def create_grain_boundaries(self):
+        b_image = np.zeros_like(self.data)
+
+        for i in range(-2, self.w - 1):
+            for j in range(-2, self.h - 1):
+                cond = self.data[i, j] == self.data[i, j + 1] and self.data[i, j] == self.data[i, j - 1] and self.data[
+                    i + 1, j] and self.data[i, j] == self.data[i - 1, j]
+                if not cond:
+                    b_image[i, j] = self.num_of_cells + 1
+                else:
+                    b_image[i, j] = self.data[i, j]
+        return b_image
+
     def print_data(self):
         print(self.data)
+
+    @staticmethod
+    def get_pobability_matrix(rx, ry, angle=0, w=999, h=999, verbose=False):
+        image = np.zeros((w, h))
+
+        _rx = (rx - 0.5) * w / 3.
+        _ry = (ry - 0.5) * h / 3.
+
+        rr, cc = skimage.draw.ellipse(w / 2, h / 2, _rx * 0.999, _ry * 0.999)
+
+        # rr, cc = skimage.draw.polygon( [0, w, w/2, 0], [0, 0, h, 0] ) # triangle
+
+        image[rr, cc] = 1
+
+        image = skimage.transform.rotate(image, angle=angle - 90, order=1)
+
+        prob_matrix = np.zeros((3, 3), dtype=float)
+
+        ws = w / 3.0
+        hs = h / 3.0
+
+        for i in range(3):
+            for j in range(3):
+                w_low, w_high = int(ws * i), int(ws * (i + 1))
+                h_low, h_high = int(hs * j), int(hs * (j + 1))
+                prob_matrix[i, j] = np.count_nonzero(image[w_low:w_high, h_low:h_high]) / (ws * hs)
+
+        if verbose:
+            print(prob_matrix)
+
+            colors = [(1, 1, 1), (0.7, 0.7, 0.7)]
+            cm = LinearSegmentedColormap.from_list(
+                'my_list', colors, N=2)
+
+            fig = plt.figure(figsize=(3, 3))
+            ax = fig.add_subplot(1, 1, 1)
+            ax.imshow(image, cmap=cm)
+
+            bx = (0, w, w, 0, w)
+            by = (hs, hs, 2 * hs, 2 * hs, 2 * hs)
+            ax.plot(bx, by, '-k', linewidth=1.0)
+
+            bx = (ws, ws, 2 * ws, 2 * ws, 2 * ws)
+            by = (0, h, h, 0, h)
+            ax.plot(bx, by, '-k', linewidth=1.0)
+            ax.axis((0, w, h, 0))
+            ax.set_yticklabels([])
+            ax.set_xticklabels([])
+            # prob_matrix = np.array([[0, 1, 1], [1, 1, 1], [1, 1, 0]], dtype=float)
+            for i in range(3):
+                for j in range(3):
+                    ax.text((1. + 2 * i) / 6., (1. + 2 * j) / 6., "{0:.3f}".format(prob_matrix[2 - j, i]),
+                            horizontalalignment='center', verticalalignment='center', fontsize='xx-large',
+                            transform=ax.transAxes)
+
+            fig.tight_layout()
+            # fig.savefig("./neibours/prob_matirx5.png", dpi=300)
+            # ig.savefig("./neibours/prob_matirx5.eps", dpi=300)
+            fig.show()
+            plt.show()
+            plt.close()
+
+        return prob_matrix
+
+    @staticmethod
+    def rnd_cmap(n):
+        if n < 2:
+            n = 2
+        n = int(n)
+        colors = np.empty([n, 4])
+        colors[1] = [1., 1., 1., 1.]  # white background
+        colors[0] = [0., 0., 0., 1.]  # white background
+        for i in range(2, n):
+            colors[i] = [np.random.random_sample(), np.random.random_sample(), np.random.random_sample(), 1]
+
+        cm = ListedColormap(colors, name='my_list')
+        return cm
