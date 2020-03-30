@@ -2,7 +2,7 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from matplotlib.colors import ListedColormap
+from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 
 import skimage.draw
 import skimage.transform
@@ -177,7 +177,7 @@ class MircoCellularAutomaton:
             zero_cell = self.w * self.h - np.count_nonzero(self.data)
 
             if verbose:
-                print(self.it_number, zero_cell, "{0}%".format(zero_cell * 100.0 / self.w / self.h))
+                print(self.it_number, zero_cell, "{:2f}%".format(zero_cell * 100.0 / self.w / self.h))
 
             if self.is_animated:
                 self.do_animation()
@@ -210,23 +210,25 @@ class MircoCellularAutomaton:
         return bw_image
 
     def create_grain_boundaries(self):
-        b_image = np.zeros_like(self.data)
+        # b_image = np.zeros_like(self.data)
+        b_image = np.array(self.data)
 
-        for i in range(-2, self.w - 1):
-            for j in range(-2, self.h - 1):
+        for i in range(1, self.w - 1):
+            for j in range(1, self.h - 1):
                 cond = self.data[i, j] == self.data[i, j + 1] and self.data[i, j] == self.data[i, j - 1] and self.data[
                     i + 1, j] and self.data[i, j] == self.data[i - 1, j]
                 if not cond:
                     b_image[i, j] = self.num_of_cells + 1
                 else:
                     b_image[i, j] = self.data[i, j]
+
         return b_image
 
     def print_data(self):
         print(self.data)
 
     @staticmethod
-    def get_pobability_matrix(rx, ry, angle=0, w=999, h=999, verbose=False):
+    def get_probability_matrix(rx, ry, angle=0, w=999, h=999, verbose=False):
         image = np.zeros((w, h))
 
         _rx = (rx - 0.5) * w / 3.

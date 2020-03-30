@@ -25,7 +25,7 @@ class DamaskExporter:
         self.add_loadstep(strain=strain, stress=stress)
         return strain, stress
 
-    def tension_x(self, val=1e-3):
+    def tension_x(self, val=1e-5):
         strain = np.zeros((3, 3))
         stress = np.full((3, 3), None)
         strain[0, 0] = val
@@ -36,7 +36,7 @@ class DamaskExporter:
         self.add_loadstep(strain=strain, stress=stress)
         return strain, stress
 
-    def tension_y(self, val=1e-3):
+    def tension_y(self, val=1e-5):
         strain = np.zeros((3, 3))
         stress = np.full((3, 3), None)
         strain[1, 1] = val
@@ -47,7 +47,7 @@ class DamaskExporter:
         self.add_loadstep(strain=strain, stress=stress)
         return strain, stress
 
-    def tension_x_and_y(self, xval=1e-4, yval=1e-4, restore=True):
+    def tension_x_and_y(self, xval=1e-5, yval=1e-5, restore=True):
         strain = np.zeros((3, 3))
         stress = np.full((3, 3), None)
         strain[0, 0] = xval
@@ -61,7 +61,7 @@ class DamaskExporter:
             self.add_loadstep(strain=strain, stress=stress)
         return strain, stress
 
-    def shear_xy(self, val=1e-3):
+    def shear_xy(self, val=1e-5):
         strain = np.zeros((3, 3))
         stress = np.full((3, 3), np.nan)
         strain[1, 0] = val
@@ -153,10 +153,11 @@ class DamaskExporter:
         pass
 
     def load_by_ls_num(self, n):
-        frmt = ":0{0}d".format(int(np.log(self.n_ls))-1)
-        frmt = "{"+frmt+"}"
+        frmt = ":0{0}d".format(int(np.log(self.n_ls)) - 1)
+        frmt = "{" + frmt + "}"
         self.ls_data = self.post_txt(self.project_name + "_" + self.project_name + "_inc{}.txt".format(frmt).format(n))
-        self.ls_nodal_data = self.post_txt(self.project_name + "_" + self.project_name + "_inc{}_nodal.txt".format(frmt).format(n))
+        #self.ls_nodal_data = self.post_txt(
+        #    self.project_name + "_" + self.project_name + "_inc{}_nodal.txt".format(frmt).format(n))
         pass
 
     def post_txt(self, filename):
@@ -200,17 +201,31 @@ class DamaskExporter:
         text_file.close()
         pass
 
+    def stress_vonMizes(self, s):
+        von_mizes = np.sqrt(((s[0, 0] - s[1, 1]) ** 2 + (s[1, 1] - s[2, 2]) ** 2 + (s[2, 2] - s[0, 0]) ** 2 + 6 * (
+                s[0, 1] ** 2 + s[1, 2] ** 2 + s[0, 2] ** 2)) / 2)
+        return von_mizes
+
+    def strain_vonMizes(self, e):
+        von_mizes = np.sqrt(
+            3.0 / 2.0 * ((e[0, 0] - e[1, 1]) ** 2 + (e[1, 1] - e[2, 2]) ** 2 + (e[2, 2] - e[0, 0]) ** 2)
+            + 3.0 / 4.0 * (e[0, 1] ** 2 + e[1, 2] ** 2 + e[0, 2] ** 2)
+        ) * 2.0 / 3.0
+        return von_mizes
+
     def get_avg_strain_tensor(self, n=-1):
         return self.avg_data[n, 36:36 + 9].reshape((3, 3))
 
     def get_avg_strain_vonMizes(self, n=-1):
-        return self.avg_data[n, 45]
+        e = self.get_strain_tensor()
+        return self.strain_vonMizes(e)
 
     def get_avg_stress_tensor(self, n=-1):
-        return self.avg_data[n, 26:26 + 9].reshape((3, 3))
+        return self.avg_data[n, 27:27 + 9].reshape((3, 3))
 
     def get_avg_stress_vonMizes(self, n=-1):
-        return self.avg_data[n, 35]
+        s = self.get_avg_stress_tensor(n)
+        return self.stress_vonMizes(s)
 
     def get_strain_tensor(self):
         w, _ = self.ls_data.shape
@@ -218,11 +233,11 @@ class DamaskExporter:
 
     def get_stress_tensor(self):
         w, _ = self.ls_data.shape
-        return self.ls_data[:, 26:26 + 9].reshape((w, 3, 3))
+        return self.ls_data[:, 27:27 + 9].reshape((w, 3, 3))
 
     def get_stress_vonMizes(self):
-        w, _ = self.ls_data.shape
-        return self.ls_data[:, 35].reshape((w))
+        s = self.get_stress_tensor()
+        return self.stress_vonMizes(np.moveaxis(s, 0, -1))
 
     def get_node_coord(self):
         w, _ = self.ls_data.shape
@@ -242,6 +257,40 @@ class DamaskExporter:
         w, _ = self.ls_nodal_data.shape
         return self.ls_nodal_data[:, 0:0 + 3].reshape((w, 3))
         pass
+
+    def get_max_stress_for_each_phase(self):
+        phase = self.ls_data[:, 26]
+        list_phase = np.unique(phase)
+        max_stress = np.zeros_like(list_phase)
+        von_mizes = self.get_stress_vonMizes()
+        for i in list_phase:
+            mask = phase == i
+            max_stress[int(i - 1)] = np.max(von_mizes[mask])
+
+        return max_stress
+
+    def get_max095_stress_for_each_phase(self):
+        phase = self.ls_data[:, 26]
+        list_phase = np.unique(phase)
+        max_stress = np.zeros_like(list_phase)
+        von_mizes = self.get_stress_vonMizes()
+        for i in list_phase:
+            mask = phase == i
+            sorted_stress = np.sort(von_mizes[mask])
+            max_stress[int(i - 1)] = sorted_stress[int(sorted_stress.size * 0.95)]
+
+        return max_stress
+
+    def get_min_stress_for_each_phase(self):
+        phase = self.ls_data[:, 26]
+        list_phase = np.unique(phase)
+        min_stress = np.zeros_like(list_phase)
+        von_mizes = self.get_stress_vonMizes()
+        for i in list_phase:
+            mask = phase == i
+            min_stress[int(i - 1)] = np.min(von_mizes[mask])
+
+        return min_stress
 
     load_template = """
 #-------------------#
@@ -327,30 +376,30 @@ filename="{0}_{0}"
 
 echo "$filename.spectralOut"
 
-postResults --nodal --cr f,p --split --separation x,y,z "$filename.spectralOut"
+postResults --nodal --cr f,p,phase --split --separation x,y,z "$filename.spectralOut"
 
 
 cd ./postProc
 
 addCauchy $filename_inc*.txt
-addMises -s Cauchy $filename_inc*.txt
+#addMises -s Cauchy $filename_inc*.txt
 
-addStrainTensors --left --logarithmic $filename_inc*.txt
-addMises -e "ln(V)" $filename_inc*.txt
+#addStrainTensors --left --logarithmic $filename_inc*.txt
+#addMises -e "ln(V)" $filename_inc*.txt
 
-addDisplacement --nodal $filename_inc*.txt     
+#addDisplacement --nodal $filename_inc*.txt
 
 cd ..
 
-postResults --cr f,p "$filename.spectralOut" --prefix="ttl"
+postResults --cr f,p,phase "$filename.spectralOut" --prefix="ttl"
 
 cd ./postProc
 
 addCauchy ttl$filename_inc*.txt
-addMises -s Cauchy ttl$filename_inc*.txt
+#addMises -s Cauchy ttl$filename_inc*.txt
 
-addStrainTensors --left --logarithmic ttl$filename_inc*.txt
-addMises -e "ln(V)" ttl$filename_inc*.txt
+#addStrainTensors --left --logarithmic ttl$filename_inc*.txt
+#addMises -e "ln(V)" ttl$filename_inc*.txt
 
      
 
