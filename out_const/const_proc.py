@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import scipy.stats
 
 
-def plot_hist(data, value_name, units="", pdf=None, filename=None):
+def plot_hist(data, value_name, units="", pdf=None, filename=None, kde=False):
 
 
     s = r'\left\langle{{ {0} }}\right\rangle = {1:.3f}\:\mathrm{{{2}}}'.format(value_name, np.mean(data), units)
@@ -18,8 +18,13 @@ def plot_hist(data, value_name, units="", pdf=None, filename=None):
     na_x = np.linspace(np.min(data), np.max(data), 1000)
 
     if pdf:
-        na_param = pdf.fit(data)
+        na_param = pdf.fit(data, loc=np.mean(data), scale=np.std(data))
+        print(na_param)
         ax.plot(na_x, pdf.pdf(na_x, *na_param))
+
+    if kde:
+        kernel = scipy.stats.gaussian_kde(data)
+        ax.plot(na_x, kernel(na_x))
 
     x_lab = r'${0}$'.format(value_name)
     if units:
@@ -31,10 +36,11 @@ def plot_hist(data, value_name, units="", pdf=None, filename=None):
     fig.savefig(filename + ".png", dpi=300)
     fig.savefig(filename)
 
-    print(scipy.stats.shapiro(data))
+    #print(scipy.stats.shapiro(data))
 
 
 def main():
+    """
     data = np.loadtxt("./consts.csv", delimiter=';', dtype=float, comments='#',
                       usecols=(0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 14, 15, 16))
 
@@ -74,6 +80,21 @@ def main():
     plot_hist(l2, "\lambda_{2}", units="GPa", filename="./l2.eps", pdf=scipy.stats.norm)
     plot_hist(l3, "\lambda_{3}", units="GPa", filename="./l3.eps", pdf=scipy.stats.norm)
 
+    plt.show()
+    """
+    mm_data = np.loadtxt("./min_max_stress.csv", delimiter=';', dtype=float, comments='#',
+                      usecols=(0, 1, 2, 3, 6, 7, 8, 9))
+
+    f1min = mm_data[:, 2]
+    f1max = mm_data[:, 3]
+
+    f2min = mm_data[:, 6]
+    f2max = mm_data[:, 7]
+
+    plot_hist(f1min, "K_{1\sigma}^{min}", units="", filename="./K_sigma_min_f1.eps", pdf=scipy.stats.genextreme)
+    plot_hist(f1max, "K_{1\sigma}^{max}", units="", filename="./K_sigma_max_f1.eps", pdf=scipy.stats.genextreme)
+    plot_hist(f2min, "K_{2\sigma}^{min}", units="", filename="./K_sigma_min_f2.eps", pdf=None, kde=True)
+    plot_hist(f2max, "K_{2\sigma}^{max}", units="", filename="./K_sigma_max_f2.eps", pdf=scipy.stats.genextreme)
     plt.show()
 
     pass
