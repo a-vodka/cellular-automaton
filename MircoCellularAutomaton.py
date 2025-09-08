@@ -32,6 +32,7 @@ class MircoCellularAutomaton:
         self.is_animated = animation
         self.animation_set = []
         self.animation_fig = plt.figure(dpi=150)
+        self.cmap = self.rnd_cmap(width * height)
 
         left_prob_matrix = np.array([[1, 1, 0], [1, 1, 1], [0, 1, 1]], dtype=float)
         right_prob_matrix = np.array([[0, 1, 1], [1, 1, 1], [1, 1, 0]], dtype=float)
@@ -151,8 +152,11 @@ class MircoCellularAutomaton:
         self.add_new_centers(num)
 
     def do_animation(self):
-        im = plt.imshow(self.data, interpolation=None, animated=True, aspect='equal')
+        np.random.seed(0)
+        cmap = self.rnd_cmap(self.num_of_cells+1)
+        im = plt.imshow(self.data, interpolation=None, animated=True, aspect='equal', cmap=cmap)
         self.animation_set.append([im])
+        np.random.RandomState()
 
     def save_animation(self, filename, writer):
         if self.is_animated:

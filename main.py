@@ -16,11 +16,11 @@ from matplotlib.colors import LinearSegmentedColormap, ListedColormap
 #                       dtype=float)
 
 
-def get_pobability_matrix(rx, ry, angle=0, w=999, h=999, verbose=False):
+def get_pobability_matrix(rx, ry, angle=0, w=999*20, h=999*20, verbose=False):
     import skimage.draw
     import skimage.transform
 
-    image = np.zeros((w, h))
+    image = np.zeros((w, h), dtype=np.int16)
 
     _rx = (rx - 0.5) * w / 3.
     _ry = (ry - 0.5) * h / 3.
@@ -40,9 +40,17 @@ def get_pobability_matrix(rx, ry, angle=0, w=999, h=999, verbose=False):
 
     for i in range(3):
         for j in range(3):
+            print(i,j)
             w_low, w_high = int(ws * i), int(ws * (i + 1))
             h_low, h_high = int(hs * j), int(hs * (j + 1))
+            print(w_low, w_high, h_low, h_high)
             prob_matrix[i, j] = np.count_nonzero(image[w_low:w_high, h_low:h_high]) / (ws * hs)
+            
+
+    #prob_matrix[0, 0] = prob_matrix[2, 2]
+    #prob_matrix[0, 1] = prob_matrix[2, 1]
+    #prob_matrix[0, 2] = prob_matrix[2, 0]
+    prob_matrix[1, 1] = 1.0001
 
     if verbose:
         print(prob_matrix)
@@ -65,16 +73,17 @@ def get_pobability_matrix(rx, ry, angle=0, w=999, h=999, verbose=False):
         ax.axis((0, w, h, 0))
         ax.set_yticklabels([])
         ax.set_xticklabels([])
+        r = lambda f,p: f - f % p
         # prob_matrix = np.array([[0, 1, 1], [1, 1, 1], [1, 1, 0]], dtype=float)
         for i in range(3):
             for j in range(3):
-                ax.text((1. + 2 * i) / 6., (1. + 2 * j) / 6., "{0:.3f}".format(prob_matrix[2 - j, i]),
+                ax.text((1. + 2 * i) / 6., (1. + 2 * j) / 6., "{0:.3f}".format(r(prob_matrix[2 - j, i],0.001)),
                         horizontalalignment='center', verticalalignment='center', fontsize='xx-large',
                         transform=ax.transAxes)
 
         fig.tight_layout()
-        # fig.savefig("./neibours/prob_matirx5.png", dpi=300)
-        # ig.savefig("./neibours/prob_matirx5.eps", dpi=300)
+        fig.savefig("./neibours/prob_matirx_circle.png", dpi=300)
+        fig.savefig("./neibours/prob_matirx_circle.eps", dpi=300)
         fig.show()
         plt.show()
         plt.close()
@@ -178,13 +187,13 @@ def main():
 
     cm = []
 
-    # prob_matrix = get_pobability_matrix(2.0, 2.0 * 2.0 / 3.0, angle=45, verbose=False)
-    prob_matrix = get_pobability_matrix(1.7, 2.0, angle=0, verbose=False)
-
+    #prob_matrix = get_pobability_matrix(2.0, 2.0 * 2.0 / 3.0, angle=45, verbose=True)
+    prob_matrix = get_pobability_matrix(2.0, 2.0, angle=0, verbose=True)
+    exit(0)
     # plt_n_grain_funcs()
 
     ca = MircoCellularAutomaton(513, 565, neighbour='custom', neighbour_matrix=prob_matrix, periodic=False,
-                                animation=False, centers_func=n_grain_revexp)
+                                animation=True, centers_func=n_grain_const)
     # ca = MircoCellularAutomaton(513, 565, neighbour='moore', periodic=False, animation=True)
     # ca = MircoCellularAutomaton(513, 565, neighbour='von_neumann', periodic=False, animation=True)
 
@@ -217,14 +226,14 @@ def main():
     data = ca.data
 
     # ca.save_animation_mpeg('elipse_prob.avi')
-    # ca.save_animation_gif('elipse_prob.gif')
+    ca.save_animation_gif('./animation/n_grain_const.gif')
 
     # bwimage = ca.to_black_and_white()
 
     plt.imshow(data, interpolation='none', cmap=cm)
     plt.show()
 
-    np.save("./models2/reverse-exp", ca.data)
+    # np.save("./models2/reverse-exp", ca.data)
     # print("------ Starting model analyzer ------")
     # import model_analizer
     # model_analizer.main()
